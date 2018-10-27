@@ -32,7 +32,9 @@ class ApiLogsController < BaseApiController
       logger.info "Machine not found"
       render nothing: true, status: :forbidden
     else
-      @log = Log.where("logger_id = #{@machine.id}").order("id desc")
+      @log = Log.where("logger_id = #{@machine.id}").order("id desc").
+             joins("LEFT JOIN users ON users.id = logs.user_id").
+             select("logs.*, users.name AS user_name")
       if params['user_id']
         @log = @log.where("user_id = #{params['user_id']}")
       end
