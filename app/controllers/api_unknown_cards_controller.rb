@@ -8,7 +8,7 @@ class ApiUnknownCardsController < BaseApiController
 
   def create
     user = User.find_by_card_id(params[:card_id])
-    if user
+    if user && user.active
         # A user already has this card, return HTTP 409
         logger.info "User not found"
         render nothing: true, status: :conflict
