@@ -1,0 +1,65 @@
+diff --git a/firmware/firmware.ino b/firmware/firmware.ino
+index 6171a5b..50b276f 100644
+--- a/firmware/firmware.ino
++++ b/firmware/firmware.ino
+@@ -1,9 +1,9 @@
+-// Note: Use https://github.com/MicroBahner/TFT_22_ILI9225
++// Note: Use https://github.com/adafruit/Adafruit_ILI9341
+ 
+-#include "SPI.h"
+-#include "TFT_22_ILI9225.h"
++//#include "SPI.h"
++#include "Adafruit_ILI9341.h"
+ 
+-#include "animater.h"
++//#include "animater.h"
+ 
+ const char* version = "0.0.4";
+ 
+@@ -13,17 +13,18 @@ const int GREEN_SW_PIN = 6;
+ const int RELAY_PIN = 12;
+ 
+ const int TFT_RST = 8;
+-const int TFT_RS = 9;
++const int TFT_DC = 9;
+ const int TFT_CS = 10;   // SS
+ const int TFT_SDI = 11;  // MOSI
+ const int TFT_CLK = 13;  // SCK
+-const int TFT_LED = 7;
++const int TFT_MISO = 12;
+ 
+ const int TFT_BRIGHTNESS = 200;
+ 
+ const int LOCK_OPEN_TIME_MS = 5000;
+ 
+-TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_LED, TFT_BRIGHTNESS);
++//TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_LED, TFT_BRIGHTNESS);
++Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_SDI, TFT_CLK, TFT_RST, TFT_MISO);
+ 
+ const int lcd_top = 38;
+ const int lcd_line_height_large = 17;
+@@ -31,7 +32,7 @@ const int lcd_line_height_small = 10;
+ const int lcd_last_large_line = (ILI9225_LCD_WIDTH - lcd_top)/lcd_line_height_large - 1;
+ const int lcd_last_small_line = (ILI9225_LCD_WIDTH - lcd_top)/lcd_line_height_small - 1;
+ 
+-Animater anim(tft);
++//Animater anim(tft);
+ 
+ void setup()
+ {
+@@ -194,7 +195,7 @@ void loop()
+                 if (!drawn_logo)
+                 {
+                     drawn_logo = true;
+-                    anim.reset();
++                    //anim.reset();
+                 }
+                 else
+                     tft.fillRectangle(0, lcd_top, ILI9225_LCD_HEIGHT-1, ILI9225_LCD_WIDTH-1, COLOR_BLACK);
+@@ -305,5 +306,5 @@ void loop()
+             buf[buf_index++] = c;
+         }
+     }
+-    anim.update();
++    //anim.update();
+ }
