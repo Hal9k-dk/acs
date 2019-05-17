@@ -96,14 +96,14 @@ bool green_key_pressed = false;
 void erase_small(int line)
 {
     tft.fillRect(0, lcd_top+line*lcd_line_height_small,
-                 screen_width, lcd_top+(line+1)*lcd_line_height_small,
+                 screen_width, lcd_line_height_small,
                  TFT_BLACK);
 }
 
 void erase_large(int line)
 {
     tft.fillRect(0, lcd_top+line*lcd_line_height_large,
-                 screen_width, lcd_top+(line+1)*lcd_line_height_large,
+                 screen_width, lcd_line_height_large,
                  TFT_BLACK);
 }
 
@@ -247,7 +247,7 @@ void loop()
                     int16_t dummy1;
                     uint16_t dummy2, w;
                     tft.getTextBounds(s, 0, 0, &dummy1, &dummy1, &w, &dummy2);
-                    tft.setCursor(0 /*(tft.width() - w)/2*/, lcd_top+(line+1)*lcd_line_height_large);
+                    tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_large);
                     tft.setTextColor(colours[col]);
                     tft.print(s);
                     Serial.println("OK T");
@@ -273,7 +273,9 @@ void loop()
                     if (buf[5] != '0')
                         erase_small(line);
                     String s(buf+6);
-                    const auto w = 20;//!!tft.getTextWidth(s);
+                    int16_t dummy1;
+                    uint16_t dummy2, w;
+                    tft.getTextBounds(s, 0, 0, &dummy1, &dummy1, &w, &dummy2);
                     tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_small);
                     tft.setTextColor(colours[col]);
                     tft.print(s);
