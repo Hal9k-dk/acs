@@ -95,14 +95,14 @@ bool green_key_pressed = false;
 
 void erase_small(int line)
 {
-    tft.fillRect(0, lcd_top+line*lcd_line_height_small,
+    tft.fillRect(0, lcd_top+line*lcd_line_height_small+1,
                  screen_width, lcd_line_height_small,
                  TFT_BLACK);
 }
 
 void erase_large(int line)
 {
-    tft.fillRect(0, lcd_top+line*lcd_line_height_large,
+    tft.fillRect(0, lcd_top+line*lcd_line_height_large+1,
                  screen_width, lcd_line_height_large,
                  TFT_BLACK);
 }
@@ -284,6 +284,9 @@ void loop()
                 break;
             case 'c':
                 // Clock
+                tft.fillRect(0, screen_height - lcd_line_height_small,
+                             screen_width, lcd_line_height_small,
+                             TFT_BLACK);
                 tft.setFont(&FreeSans9pt7b);
                 tft.setCursor(screen_width/2 - 20, screen_height - lcd_line_height_small);
                 tft.setTextColor(TFT_GREEN);
