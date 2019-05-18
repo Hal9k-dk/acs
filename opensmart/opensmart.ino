@@ -47,6 +47,8 @@ void setup()
 {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, 0);
+  pinMode(RED_SW_PIN, INPUT_PULLUP);
+  pinMode(GREEN_SW_PIN, INPUT_PULLUP);
 
   Serial.begin(115200);
 
