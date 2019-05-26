@@ -374,7 +374,7 @@ class Ui
     if ct != @last_time
       write(false, true, 12, ct, 'blue')
       @last_time = ct
-      #send(get_led_inten_cmd())
+      @reader.send(get_led_inten_cmd())
     end
   end
 end
@@ -432,7 +432,7 @@ class CardReader
     who = ''
     begin
       conn = PG.connect(host: 'localhost', dbname: 'acs_production', user: 'acs', password: $db_pass)
-      res = conn.exec("SELECT u.id, u.name FROM users u join machines_users mu on mu.user_id = u.id join machines m on m.id = mu.machine_id where u.card_id = '#{id}' and m.name='Door'")
+      res = conn.exec("SELECT u.id, u.name FROM users u join machines_users mu on mu.user_id = u.id join machines m on m.id = mu.machine_id where u.card_id = '#{id}' and m.name='Door' and u.active = true")
       puts("Got #{res.ntuples()} tuples from DB in #{Time.now - db_start} s")
       if res && res.ntuples() > 0
         allowed = true
@@ -558,4 +558,6 @@ ui.clear();
 while true
   ui.update()
   reader.update()
+  sleep 1
+  puts "loop"
 end
