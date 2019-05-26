@@ -51,8 +51,6 @@ void setup()
   Serial.begin(115200);
 
   uint16_t ID = tft.readID();
-  Serial.print("ID = 0x");
-  Serial.println(ID, HEX);
   tft.begin(ID);
 
   tft.setRotation(1);
@@ -123,8 +121,6 @@ int get_2digit_number(const char* buf)
 
 void loop()
 {
-    //Serial.println(analogRead(SW_PIN));
-
     switch (lock_state)
     {
     case LOCK_OPEN:
@@ -143,6 +139,19 @@ void loop()
             lock_open_tick = LOCK_CLOSED;
     }
 
+    const auto sw = analogRead(SW_PIN);
+    
+    // R1/R4: 512
+    // R2/R4: 704
+    // R3/R4: 856
+
+    if (sw < 600)
+        key_pressed[0] = true;
+    else if (sw < 800)
+        key_pressed[1] = true;
+    else if (sw < 900)
+        key_pressed[2] = true;
+    
     if (Serial.available())
     {
         // Command
