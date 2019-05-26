@@ -23,8 +23,7 @@ OPENSMART_kbv tft;
 
 const char* version = "0.0.4";
 
-const int RED_SW_PIN = 3;
-const int GREEN_SW_PIN = 2;
+const int SW_PIN = A5;
 
 const int RELAY_PIN = 12;
 
@@ -47,8 +46,7 @@ void setup()
 {
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, 0);
-  pinMode(RED_SW_PIN, INPUT_PULLUP);
-  pinMode(GREEN_SW_PIN, INPUT_PULLUP);
+  pinMode(SW_PIN, INPUT);
 
   Serial.begin(115200);
 
@@ -92,8 +90,7 @@ const int colours[] =
 
 bool drawn_logo = true;//false;
 
-bool red_key_pressed = false;
-bool green_key_pressed = false;
+static bool key_pressed[3];
 
 void erase_small(int line)
 {
@@ -126,10 +123,7 @@ int get_2digit_number(const char* buf)
 
 void loop()
 {
-    if (!digitalRead(RED_SW_PIN))
-        red_key_pressed = true;
-    if (!digitalRead(GREEN_SW_PIN))
-        green_key_pressed = true;
+    //Serial.println(analogRead(SW_PIN));
 
     switch (lock_state)
     {
@@ -286,8 +280,8 @@ void loop()
                 break;
             case 'c':
                 // Clock
-                tft.fillRect(0, screen_height - lcd_line_height_small,
-                             screen_width, lcd_line_height_small,
+                tft.fillRect(screen_width/2 - 50, screen_height - 2*lcd_line_height_small + 2,
+                             100, lcd_line_height_small,
                              TFT_BLACK);
                 tft.setFont(&FreeSans9pt7b);
                 tft.setCursor(screen_width/2 - 20, screen_height - lcd_line_height_small);
@@ -298,9 +292,11 @@ void loop()
 
             case 'S':
                 Serial.print("S");
-                Serial.print(red_key_pressed);
-                Serial.println(green_key_pressed);
-                red_key_pressed = green_key_pressed = false;
+                for (int i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
+                    Serial.print(key_pressed[i]);
+                Serial.println();
+                for (int i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
+                    key_pressed[i] = false;
                 break;
                 
             default:
