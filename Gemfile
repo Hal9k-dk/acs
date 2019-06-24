@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '4.2.7.1'
+gem 'rails', '4.2.8'
 # Use postgresql as the database for Active Record
 gem 'pg', '~> 0.15'
 # Use SCSS for stylesheets
@@ -52,5 +52,7 @@ gem 'skins'
 gem 'haml'
 gem 'smart_listing'
 gem 'bootstrap-sass', '~> 3.3.6'
-gem 'bcrypt'
+gem 'bcrypt', '3.1.12'
 gem 'sucker_punch'
+gem 'mime-types'
+gem 'rest-client'
