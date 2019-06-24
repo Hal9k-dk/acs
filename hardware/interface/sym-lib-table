@@ -5,4 +5,5 @@
   (lib (name power)(type Legacy)(uri ${KIPRJMOD}/libs/power.lib)(options "")(descr ""))
   (lib (name Transistor_BJT)(type Legacy)(uri ${KIPRJMOD}/libs/Transistor_BJT.lib)(options "")(descr ""))
   (lib (name w_relay)(type Legacy)(uri ${KIPRJMOD}/libs/w_relay.lib)(options "")(descr ""))
+  (lib (name Mechanical)(type Legacy)(uri ${KIPRJMOD}/libs/Mechanical.lib)(options "")(descr ""))
 )

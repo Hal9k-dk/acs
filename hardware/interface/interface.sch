@@ -20,7 +20,7 @@ U 1 1 58D2E8F5
 P 7500 5000
 F 0 "Q1" H 7700 5075 50  0000 L CNN
 F 1 "BC547" H 7700 5000 50  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-92" H 7700 4925 50  0001 L CIN
+F 2 "Package_TO_SOT_THT:TO-92_Wide" H 7700 4925 50  0001 L CIN
 F 3 "" H 7500 5000 50  0001 L CNN
 	1    7500 5000
 	1    0    0    -1  
@@ -58,20 +58,16 @@ Wire Wire Line
 Connection ~ 7600 4750
 Connection ~ 7050 4000
 $Comp
-L interface-rescue:CONN_01X02 J8
+L Connector_Generic:Conn_01x02 J8
 U 1 1 58D2EE7D
-P 9150 4450
-F 0 "J8" H 9150 4600 50  0000 C CNN
-F 1 "CONN_01X02" V 9250 4450 50  0000 C CNN
-F 2 "Connector_JST:JST_XH_B02B-XH-A_1x02_P2.50mm_Vertical" H 9150 4450 50  0001 C CNN
-F 3 "" H 9150 4450 50  0001 C CNN
-	1    9150 4450
+P 9150 4400
+F 0 "J8" H 9150 4550 50  0000 C CNN
+F 1 "CONN_01X02" V 9250 4400 50  0000 C CNN
+F 2 "Connector_JST:JST_XH_B02B-XH-A_1x02_P2.50mm_Vertical" H 9150 4400 50  0001 C CNN
+F 3 "" H 9150 4400 50  0001 C CNN
+	1    9150 4400
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	7900 4200 7900 4050
-Wire Wire Line
-	7900 4050 8800 4050
 Wire Wire Line
 	8800 4050 8800 4400
 Wire Wire Line
@@ -80,34 +76,30 @@ Wire Wire Line
 	8950 4500 8800 4500
 Wire Wire Line
 	8800 4500 8800 4800
-Wire Wire Line
-	8800 4800 7850 4800
-Wire Wire Line
-	7850 4800 7850 4600
 Text Notes 9350 4500 0    60   ~ 0
 LATCH
 NoConn ~ 9850 2250
 $Comp
 L Device:R R1
 U 1 1 598071E6
-P 2950 2450
-F 0 "R1" V 3030 2450 50  0000 C CNN
-F 1 "R" V 2950 2450 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P2.54mm_Vertical" V 2880 2450 50  0001 C CNN
-F 3 "" H 2950 2450 50  0001 C CNN
-	1    2950 2450
-	1    0    0    -1  
+P 2750 3200
+F 0 "R1" V 2700 3050 50  0000 C CNN
+F 1 "1K" V 2750 3200 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 2680 3200 50  0001 C CNN
+F 3 "" H 2750 3200 50  0001 C CNN
+	1    2750 3200
+	0    1    1    0   
 $EndComp
 $Comp
 L Device:R R3
 U 1 1 5980722B
-P 3900 2450
-F 0 "R3" V 3980 2450 50  0000 C CNN
-F 1 "R" V 3900 2450 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P2.54mm_Vertical" V 3830 2450 50  0001 C CNN
-F 3 "" H 3900 2450 50  0001 C CNN
-	1    3900 2450
-	1    0    0    -1  
+P 2750 3400
+F 0 "R3" V 2700 3250 50  0000 C CNN
+F 1 "5K1" V 2750 3400 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 2680 3400 50  0001 C CNN
+F 3 "" H 2750 3400 50  0001 C CNN
+	1    2750 3400
+	0    1    1    0   
 $EndComp
 $Comp
 L interface-rescue:GND #PWR02
@@ -120,10 +112,6 @@ F 3 "" H 2950 3900 50  0001 C CNN
 	1    2950 3900
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	2950 2200 3450 2200
-Wire Wire Line
-	3900 2200 3900 2300
 Wire Wire Line
 	6650 4000 7050 4000
 $Comp
@@ -151,15 +139,13 @@ Wire Wire Line
 Wire Wire Line
 	7050 4000 7600 4000
 Wire Wire Line
-	2950 2200 2950 2300
-Wire Wire Line
 	7600 5250 7600 5200
 $Comp
 L Connector_Generic:Conn_01x04 J1
 U 1 1 5CDFF210
 P 2300 3400
 F 0 "J1" H 2218 2975 50  0000 C CNN
-F 1 "Conn_01x04" H 2218 3066 50  0000 C CNN
+F 1 "Switches" H 2218 3066 50  0000 C CNN
 F 2 "Connector_JST:JST_XH_B04B-XH-A_1x04_P2.50mm_Vertical" H 2300 3400 50  0001 C CNN
 F 3 "~" H 2300 3400 50  0001 C CNN
 	1    2300 3400
@@ -169,46 +155,17 @@ Wire Wire Line
 	2500 3500 2950 3500
 Wire Wire Line
 	2950 3500 2950 3900
-Wire Wire Line
-	2950 3200 2500 3200
 $Comp
 L Device:R R2
 U 1 1 5CE009C8
-P 3450 2450
-F 0 "R2" H 3520 2496 50  0000 L CNN
-F 1 "R" H 3520 2405 50  0000 L CNN
-F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P2.54mm_Vertical" V 3380 2450 50  0001 C CNN
-F 3 "~" H 3450 2450 50  0001 C CNN
-	1    3450 2450
-	1    0    0    -1  
+P 2750 3300
+F 0 "R2" V 2700 3100 50  0000 L CNN
+F 1 "2K2" V 2750 3300 50  0000 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 2680 3300 50  0001 C CNN
+F 3 "~" H 2750 3300 50  0001 C CNN
+	1    2750 3300
+	0    1    1    0   
 $EndComp
-Wire Wire Line
-	3450 2200 3450 2300
-Connection ~ 3450 2200
-Wire Wire Line
-	3450 2200 3900 2200
-Wire Wire Line
-	3450 3300 2500 3300
-Wire Wire Line
-	2500 3400 3900 3400
-Wire Wire Line
-	4100 3400 3900 3400
-Connection ~ 3900 3400
-Wire Wire Line
-	3900 2600 3900 3400
-Wire Wire Line
-	3450 2600 3450 3300
-Wire Wire Line
-	2950 2600 2950 3200
-Wire Wire Line
-	4100 3300 3450 3300
-Connection ~ 3450 3300
-Wire Wire Line
-	4100 3200 2950 3200
-Connection ~ 2950 3200
-Wire Wire Line
-	4100 3500 2950 3500
-Connection ~ 2950 3500
 Wire Wire Line
 	4100 3100 4050 3100
 Wire Wire Line
@@ -216,10 +173,10 @@ Wire Wire Line
 Wire Wire Line
 	4050 5000 6700 5000
 $Comp
-L Device:R R4
+L Device:R R5
 U 1 1 58D2EA0D
 P 6850 5000
-F 0 "R4" V 6930 5000 50  0000 C CNN
+F 0 "R5" V 6930 5000 50  0000 C CNN
 F 1 "1K" V 6850 5000 50  0000 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 6780 5000 50  0001 C CNN
 F 3 "" H 6850 5000 50  0001 C CNN
@@ -227,14 +184,14 @@ F 3 "" H 6850 5000 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x06 J2
+L Connector_Generic:Conn_01x04 J2
 U 1 1 5CE0A21E
-P 4300 3200
-F 0 "J2" H 4380 3192 50  0000 L CNN
-F 1 "Conn_01x06" H 4380 3101 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical" H 4300 3200 50  0001 C CNN
-F 3 "~" H 4300 3200 50  0001 C CNN
-	1    4300 3200
+P 4300 3100
+F 0 "J2" H 4250 2650 50  0000 L CNN
+F 1 "Arduino" H 4250 2550 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4300 3100 50  0001 C CNN
+F 3 "~" H 4300 3100 50  0001 C CNN
+	1    4300 3100
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
@@ -254,16 +211,117 @@ F 1 "RELAY_DIL16" V 7697 4206 60  0000 R CNN
 F 2 "Acs:DIP-16_Relay" H 7750 4400 60  0001 C CNN
 F 3 "" H 7750 4400 60  0000 C CNN
 	1    7750 4400
-	0    -1   -1   0   
+	0    -1   1    0   
 $EndComp
 Wire Wire Line
 	7600 4000 7600 4200
 Wire Wire Line
 	7600 4600 7600 4750
 Wire Wire Line
-	3900 2200 7050 2200
-Wire Wire Line
 	7050 2200 7050 2850
-Connection ~ 3900 2200
 Connection ~ 7050 2850
+Wire Wire Line
+	7900 4600 7900 4800
+Wire Wire Line
+	7900 4800 8800 4800
+Wire Wire Line
+	7850 4050 7850 4200
+Wire Wire Line
+	7850 4050 8800 4050
+$Comp
+L Mechanical:MountingHole H1
+U 1 1 5CE975F5
+P 1650 5300
+F 0 "H1" H 1750 5346 50  0000 L CNN
+F 1 "MountingHole" H 1750 5255 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 1650 5300 50  0001 C CNN
+F 3 "~" H 1650 5300 50  0001 C CNN
+	1    1650 5300
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H2
+U 1 1 5CE979F8
+P 1650 5700
+F 0 "H2" H 1750 5746 50  0000 L CNN
+F 1 "MountingHole" H 1750 5655 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 1650 5700 50  0001 C CNN
+F 3 "~" H 1650 5700 50  0001 C CNN
+	1    1650 5700
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 5CE97D65
+P 1650 6050
+F 0 "H3" H 1750 6096 50  0000 L CNN
+F 1 "MountingHole" H 1750 6005 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 1650 6050 50  0001 C CNN
+F 3 "~" H 1650 6050 50  0001 C CNN
+	1    1650 6050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Mechanical:MountingHole H4
+U 1 1 5CE9804D
+P 1650 6400
+F 0 "H4" H 1750 6446 50  0000 L CNN
+F 1 "MountingHole" H 1750 6355 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.7mm_M2.5" H 1650 6400 50  0001 C CNN
+F 3 "~" H 1650 6400 50  0001 C CNN
+	1    1650 6400
+	1    0    0    -1  
+$EndComp
+Text Notes 4400 3350 0    60   ~ 0
+GND
+Text Notes 4400 3050 0    60   ~ 0
++5V
+Text Notes 4400 3150 0    60   ~ 0
+RELAY (D12)
+Text Notes 4400 3250 0    60   ~ 0
+SW1 (A5)
+Wire Wire Line
+	4100 3300 3700 3300
+Wire Wire Line
+	3700 3300 3700 3500
+Wire Wire Line
+	3700 3500 2950 3500
+Connection ~ 2950 3500
+Wire Wire Line
+	2500 3200 2600 3200
+Wire Wire Line
+	2600 3300 2500 3300
+Wire Wire Line
+	2500 3400 2600 3400
+Wire Wire Line
+	2950 2200 7050 2200
+Wire Wire Line
+	2950 2200 2950 2750
+Wire Wire Line
+	2950 3050 2950 3200
+Wire Wire Line
+	2950 3400 2900 3400
+Wire Wire Line
+	2900 3300 2950 3300
+Connection ~ 2950 3300
+Wire Wire Line
+	2950 3300 2950 3400
+Wire Wire Line
+	2900 3200 2950 3200
+Connection ~ 2950 3200
+Wire Wire Line
+	2950 3200 2950 3300
+Wire Wire Line
+	2950 3200 4100 3200
+$Comp
+L Device:R R4
+U 1 1 5CEB36BC
+P 2950 2900
+F 0 "R4" H 3020 2946 50  0000 L CNN
+F 1 "1K" H 3020 2855 50  0000 L CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 2880 2900 50  0001 C CNN
+F 3 "~" H 2950 2900 50  0001 C CNN
+	1    2950 2900
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
