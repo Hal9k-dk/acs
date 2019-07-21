@@ -35,7 +35,7 @@ const int screen_height = 240;
 const int screen_width = 400;
    
 const int lcd_top = 38;
-const int lcd_line_height_large = 21;
+const int lcd_line_height_large = 23;
 const int lcd_line_height_small = 16;
 const int lcd_last_large_line = (screen_height - lcd_top)/lcd_line_height_large - 1;
 const int lcd_last_small_line = (screen_height - lcd_top)/lcd_line_height_small - 1;
@@ -99,7 +99,7 @@ void erase_small(int line)
 
 void erase_large(int line)
 {
-    tft.fillRect(0, lcd_top+line*lcd_line_height_large+1,
+    tft.fillRect(0, lcd_top+line*lcd_line_height_large+1+5,
                  screen_width, lcd_line_height_large,
                  TFT_BLACK);
 }
