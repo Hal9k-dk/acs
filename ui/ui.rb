@@ -299,6 +299,7 @@ class Ui
     if @lock_state == :unlocking
       elapsed = Time.now - @unlock_time
       if elapsed > ENTER_TIME_SECS
+        puts "Lock again"
         @lock_state = :locked
       else
         send_and_wait("LT")
@@ -326,6 +327,7 @@ class Ui
       locking_at = @unlocked_at + UNLOCK_PERIOD_S
       secs_left = (locking_at - Time.now).to_i
       mins_left = (secs_left/60.0).ceil
+      #puts "Left: #{mins_left}m #{secs_left}s"
       if mins_left > 1
         s2 = "#{mins_left} minutes"
       else
@@ -368,24 +370,31 @@ class Ui
     if $opensmart
       green, white, red = read_keys()
       if red
+        puts "Red pressed at #{Time.now}"
         if @lock_state != :locked
+          @lock_state = :locked
+          @unlocked_at = nil
           @reader.add_log(nil, 'Door locked')
         end
-        @lock_state = :locked
-        @unlocked_at = nil
       elsif green
-        @lock_state = :timed_unlock
-        @unlocked_at = Time.now
-        @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
-        puts("Unlocked at #{@unlocked_at}")
+        puts "Green pressed"
+        if @lock_state != :timed_unlock
+          @lock_state = :timed_unlock
+          @unlocked_at = Time.now
+          @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
+          puts("Unlocked at #{@unlocked_at}")
+        end
       elsif white
-        if is_it_thursday?
-          @lock_state = :unlocked
-          @reader.add_log(nil, 'Door unlocked')
-        else
-          @temp_status_1 = 'It is not'
-          @temp_status_2 = 'Thursday yet'
-          @temp_status_at = Time.now
+        puts "White pressed"
+        if @lock_state != :unlocked
+          if is_it_thursday?
+            @lock_state = :unlocked
+            @reader.add_log(nil, 'Door unlocked')
+          else
+            @temp_status_1 = 'It is not'
+            @temp_status_2 = 'Thursday yet'
+            @temp_status_at = Time.now
+          end
         end
       end
     else
@@ -428,6 +437,7 @@ class Ui
     if @unlocked_at
       unlocked_for = Time.now - @unlocked_at
       if unlocked_for >= UNLOCK_PERIOD_S
+        puts "Unlocked for #{unlocked_for}"
         @unlocked_at = nil
         @lock_state = :locked
       end
@@ -621,6 +631,6 @@ ui.clear();
 while true
   ui.update()
   reader.update()
-  sleep 1
-  puts "loop"
+  sleep 0.1
+  #puts "loop"
 end
