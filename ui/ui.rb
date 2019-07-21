@@ -4,7 +4,7 @@ require 'serialport'
 require 'rest-client'
 require 'pg'
 
-HOST = 'https://panopticon.hal9k.dk'
+HOST = 'https://127.0.0.1'
 
 LED_ENTER = 'P250R8SGN'
 LED_NO_ENTRY = 'P100R30SRN'
@@ -30,6 +30,7 @@ UNLOCK_WARN_S = 5*60
 $q = Queue.new
 $api_key = File.read('apikey.txt').strip()
 $db_pass = File.read('dbpass.txt').strip()
+$opensmart = false
 
 log_thread = Thread.new do
   puts "Thread start"
@@ -67,7 +68,8 @@ def find_ports()
       sp = SerialPort.new(port,
                           { 'baud' => 115200,
                             'data_bits' => 8,
-                            'parity' => SerialPort::NONE
+                            'parity' => SerialPort::NONE,
+                            'read_timeout' => 1
                           })
       if sp
         puts "Found #{port}"
@@ -90,6 +92,8 @@ def find_ports()
               puts("Version: #{reply}")
               if reply.include? "UI"
                 r['ui'] = sp
+                version = reply.gsub(/.* v /, '')
+                $opensmart = version[0] == '1'
                 break
               elsif reply.include? "cardreader"
                 r['reader'] = sp
@@ -132,47 +136,67 @@ class Ui
     @port.flush_input
     @lock_state = :locked
     @unlock_time = nil
-    @color_map = [
-      'white',
-      'blue',
-      'green',
-      'red',
-      'navy',
-      'darkblue',
-      'darkgreen',
-      'darkcyan',
-      'cyan',
-      'turquoise',
-      'indigo',
-      'darkred',
-      'olive',
-      'gray',
-      'grey',
-      'skyblue',
-      'blueviolet',
-      'lightgreen',
-      'darkviolet',
-      'yellowgreen',
-      'brown',
-      'darkgray',
-      'darkgrey',
-      'sienna',
-      'lightblue',
-      'greenyellow',
-      'silver',
-      'lightgray',
-      'lightgrey',
-      'lightcyan',
-      'violet',
-      'azure',
-      'beige',
-      'magenta',
-      'tomato',
-      'gold',
-      'orange',
-      'snow',
-      'yellow'
-    ]
+    if !$opensmart
+      @color_map = [
+        'white',
+        'blue',
+        'green',
+        'red',
+        'navy',
+        'darkblue',
+        'darkgreen',
+        'darkcyan',
+        'cyan',
+        'turquoise',
+        'indigo',
+        'darkred',
+        'olive',
+        'gray',
+        'grey',
+        'skyblue',
+        'blueviolet',
+        'lightgreen',
+        'darkviolet',
+        'yellowgreen',
+        'brown',
+        'darkgray',
+        'darkgrey',
+        'sienna',
+        'lightblue',
+        'greenyellow',
+        'silver',
+        'lightgray',
+        'lightgrey',
+        'lightcyan',
+        'violet',
+        'azure',
+        'beige',
+        'magenta',
+        'tomato',
+        'gold',
+        'orange',
+        'snow',
+        'yellow'
+      ]
+    else
+      @color_map = [
+        'white',
+        'blue',
+        'green',
+        'red',
+        'navy',
+        'darkgreen',
+        'darkcyan',
+        'cyan',
+        'maroon',
+        'olive',
+        'gray',
+        'grey',
+        'magenta',
+        'orange',
+        'yellow'
+      ]
+    end
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
@@ -221,13 +245,22 @@ class Ui
   end
   
   def wait_response(s)
-    begin
-      line = @port.gets
-    end while !line || line.empty?
-    line.strip!
-    #puts "Reply: #{line}"
-    if line != "OK #{s[0]}"
-      puts "ERROR: Expected 'OK #{s[0]}', got '#{line}' (in response to #{s})"
+    reply = ''
+    while true
+      c = @port.getc
+      if c
+        if c.ord == 13
+          next
+        end
+        if c.ord == 10
+          break
+        end
+        reply = reply + c
+      end
+    end
+    #puts "Reply: #{reply}"
+    if reply != "OK #{s[0]}"
+      puts "ERROR: Expected 'OK #{s[0]}', got '#{reply}' (in response to #{s})"
       Process.exit()
     end
   end
@@ -251,7 +284,11 @@ class Ui
       puts "ERROR: Expected 'Sxx', got '#{line}'"
       Process.exit()
     end
-    return line[1] != '0', line[2] != '0'
+    if $opensmart
+      return line[1] != '0', line[2] != '0', line[3] != '0'
+    else
+      return line[1] != '0', line[2] != '0'
+    end
   end
   
   def update()
@@ -262,6 +299,7 @@ class Ui
     if @lock_state == :unlocking
       elapsed = Time.now - @unlock_time
       if elapsed > ENTER_TIME_SECS
+        puts "Lock again"
         @lock_state = :locked
       else
         send_and_wait("LT")
@@ -289,6 +327,7 @@ class Ui
       locking_at = @unlocked_at + UNLOCK_PERIOD_S
       secs_left = (locking_at - Time.now).to_i
       mins_left = (secs_left/60.0).ceil
+      #puts "Left: #{mins_left}m #{secs_left}s"
       if mins_left > 1
         s2 = "#{mins_left} minutes"
       else
@@ -328,22 +367,26 @@ class Ui
       @last_status_2 = s2
     end
     # Buttons
-    red, green = read_keys()
-    if red
-      if @lock_state != :locked
-        @reader.add_log(nil, 'Door locked')
-      end
-      @lock_state = :locked
-      @unlocked_at = nil
-    elsif green && @lock_state != :unlocked
-      if !@green_pressed_at
-        @green_pressed_at = Time.now
-      end
-    else
-      if @green_pressed_at
-        # Release
-        green_pressed_for = Time.now - @green_pressed_at
-        if green_pressed_for >= THURSDAY_KEY_TIME
+    if $opensmart
+      green, white, red = read_keys()
+      if red
+        puts "Red pressed at #{Time.now}"
+        if @lock_state != :locked
+          @lock_state = :locked
+          @unlocked_at = nil
+          @reader.add_log(nil, 'Door locked')
+        end
+      elsif green
+        puts "Green pressed"
+        if @lock_state != :timed_unlock
+          @lock_state = :timed_unlock
+          @unlocked_at = Time.now
+          @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
+          puts("Unlocked at #{@unlocked_at}")
+        end
+      elsif white
+        puts "White pressed"
+        if @lock_state != :unlocked
           if is_it_thursday?
             @lock_state = :unlocked
             @reader.add_log(nil, 'Door unlocked')
@@ -352,19 +395,49 @@ class Ui
             @temp_status_2 = 'Thursday yet'
             @temp_status_at = Time.now
           end
-        elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
-          @lock_state = :timed_unlock
-          @unlocked_at = Time.now
-          @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
-          puts("Unlocked at #{@unlocked_at}")
         end
       end
-      @green_pressed_at = nil
+    else
+      # Not OpenSmart
+      red, green = read_keys()
+      if red
+        if @lock_state != :locked
+          @reader.add_log(nil, 'Door locked')
+        end
+        @lock_state = :locked
+        @unlocked_at = nil
+      elsif green && @lock_state != :unlocked
+        if !@green_pressed_at
+          @green_pressed_at = Time.now
+        end
+      else
+        if @green_pressed_at
+          # Release
+          green_pressed_for = Time.now - @green_pressed_at
+          if green_pressed_for >= THURSDAY_KEY_TIME
+            if is_it_thursday?
+              @lock_state = :unlocked
+              @reader.add_log(nil, 'Door unlocked')
+            else
+              @temp_status_1 = 'It is not'
+              @temp_status_2 = 'Thursday yet'
+              @temp_status_at = Time.now
+            end
+          elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
+            @lock_state = :timed_unlock
+            @unlocked_at = Time.now
+            @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
+            puts("Unlocked at #{@unlocked_at}")
+          end
+        end
+        @green_pressed_at = nil
+      end
     end
     # Automatic locking
     if @unlocked_at
       unlocked_for = Time.now - @unlocked_at
       if unlocked_for >= UNLOCK_PERIOD_S
+        puts "Unlocked for #{unlocked_for}"
         @unlocked_at = nil
         @lock_state = :locked
       end
@@ -372,7 +445,7 @@ class Ui
     # Time display
     ct = DateTime.now.to_time.strftime("%H:%M")
     if ct != @last_time
-      write(false, true, 12, ct, 'blue')
+      write(false, true, $opensmart ? 10 : 12, ct, 'blue')
       @last_time = ct
       @reader.send(get_led_inten_cmd())
     end
@@ -558,6 +631,6 @@ ui.clear();
 while true
   ui.update()
   reader.update()
-  sleep 1
-  puts "loop"
+  sleep 0.1
+  #puts "loop"
 end
