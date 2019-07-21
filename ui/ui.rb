@@ -246,15 +246,21 @@ class Ui
   
   def wait_response(s)
     reply = ''
-    begin
-      line = @port.gets
-      if line
-        reply = line.strip
+    while true
+      c = @port.getc
+      if c
+        if c.ord == 13
+          next
+        end
+        if c.ord == 10
+          break
+        end
+        reply = reply + c
       end
-    end while !line || line.empty? || reply.empty?
+    end
     #puts "Reply: #{reply}"
     if reply != "OK #{s[0]}"
-      puts "ERROR: Expected 'OK #{s[0]}', got '#{line}' (in response to #{s})"
+      puts "ERROR: Expected 'OK #{s[0]}', got '#{reply}' (in response to #{s})"
       Process.exit()
     end
   end
