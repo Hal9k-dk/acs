@@ -21,7 +21,7 @@ OPENSMART_kbv tft;
 
 #include "animater.h"
 
-const char* version = "0.0.4";
+const char* version = "1.0.0";
 
 const int SW_PIN = A5;
 
