@@ -252,7 +252,7 @@ class Ui
         if c.ord == 13
           next
         end
-        if c.ord == 10
+        if c.ord == 10 && !reply.empty?
           break
         end
         reply = reply + c
@@ -260,7 +260,7 @@ class Ui
     end
     #puts "Reply: #{reply}"
     if reply != "OK #{s[0]}"
-      puts "ERROR: Expected 'OK #{s[0]}', got '#{reply}' (in response to #{s})"
+      puts "ERROR: Expected 'OK #{s[0]}', got '#{reply.inspect}' (in response to #{s})"
       Process.exit()
     end
   end
@@ -275,19 +275,28 @@ class Ui
   def read_keys()
     @port.flush_input()
     @port.puts("S")
-    begin
-      line = @port.gets
-    end while !line || line.empty?
-    line.strip!
-    #puts "Reply: #{line}"
-    if line[0] != "S"
-      puts "ERROR: Expected 'Sxx', got '#{line}'"
+    reply = ''
+    while true
+      c = @port.getc
+      if c
+        if c.ord == 13
+          next
+        end
+        if c.ord == 10 && !reply.empty?
+          break
+        end
+        reply = reply + c
+      end
+    end
+    #puts "Reply: #{reply}"
+    if reply[0] != "S"
+      puts "ERROR: Expected 'Sxx', got '#{reply.inspect}'"
       Process.exit()
     end
     if $opensmart
-      return line[1] != '0', line[2] != '0', line[3] != '0'
+      return reply[1] == '1', reply[2] == '1', reply[3] == '1'
     else
-      return line[1] != '0', line[2] != '0'
+      return reply[1] == '1', reply[2] == '1'
     end
   end
   
