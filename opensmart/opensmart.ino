@@ -145,13 +145,15 @@ void loop()
     // R2/R4: 704
     // R3/R4: 856
 
-    if (sw < 600)
-        key_pressed[0] = true;
-    else if (sw < 800)
-        key_pressed[1] = true;
-    else if (sw < 900)
-        key_pressed[2] = true;
-    
+    if (!key_pressed[0] && !key_pressed[1] && !key_pressed[2])
+    {
+        if (sw < 522 && sw > 502)
+            key_pressed[0] = true;
+        else if (sw < 714 && sw > 694)
+            key_pressed[1] = true;
+        else if (sw < 866 && sw > 846)
+            key_pressed[2] = true;
+    }    
     if (Serial.available())
     {
         // Command
