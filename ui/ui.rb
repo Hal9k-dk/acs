@@ -325,10 +325,15 @@ class Ui
       col = 'orange'
       s1 = 'Locked'
     elsif @lock_state == :unlocked
-      send_and_wait("L1")
-      col = 'green'
-      s1 = 'Open'
-      @reader.advertise_open()
+      if !is_it_thursday?
+        puts "Locking, no longer Thursday"
+        @lock_state = :locked
+      else
+        send_and_wait("L1")
+        col = 'green'
+        s1 = 'Open'
+        @reader.advertise_open()
+      end
     elsif @lock_state == :timed_unlock
       send_and_wait("L1")
       col = 'green'
