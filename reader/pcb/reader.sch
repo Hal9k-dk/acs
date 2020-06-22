@@ -1,0 +1,210 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Device:LED D1
+U 1 1 5EF10008
+P 6300 2300
+F 0 "D1" H 6293 2045 50  0000 C CNN
+F 1 "LED" H 6293 2136 50  0000 C CNN
+F 2 "LED_THT:LED_D5.0mm" H 6300 2300 50  0001 C CNN
+F 3 "~" H 6300 2300 50  0001 C CNN
+	1    6300 2300
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:LED D2
+U 1 1 5EF1038B
+P 6325 2925
+F 0 "D2" H 6318 2670 50  0000 C CNN
+F 1 "LED" H 6318 2761 50  0000 C CNN
+F 2 "LED_THT:LED_D5.0mm" H 6325 2925 50  0001 C CNN
+F 3 "~" H 6325 2925 50  0001 C CNN
+	1    6325 2925
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R1
+U 1 1 5EF10894
+P 5800 2300
+F 0 "R1" V 5593 2300 50  0000 C CNN
+F 1 "R" V 5684 2300 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 5730 2300 50  0001 C CNN
+F 3 "~" H 5800 2300 50  0001 C CNN
+	1    5800 2300
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R2
+U 1 1 5EF11525
+P 5800 2925
+F 0 "R2" V 5593 2925 50  0000 C CNN
+F 1 "R" V 5684 2925 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 5730 2925 50  0001 C CNN
+F 3 "~" H 5800 2925 50  0001 C CNN
+	1    5800 2925
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:Buzzer BZ1
+U 1 1 5EF12236
+P 5725 3625
+F 0 "BZ1" H 5877 3654 50  0000 L CNN
+F 1 "Buzzer" H 5877 3563 50  0000 L CNN
+F 2 "modules:Buzzer_D22mm_H8mm_P10mm" V 5700 3725 50  0001 C CNN
+F 3 "~" V 5700 3725 50  0001 C CNN
+	1    5725 3625
+	1    0    0    -1  
+$EndComp
+$Comp
+L gtrzps:RDM6300 U2
+U 1 1 5EF0F5AA
+P 3125 5575
+F 0 "U2" H 3569 5621 50  0000 L CNN
+F 1 "RDM6300" H 3569 5530 50  0000 L CNN
+F 2 "modules:RDM6300_B38.5x18.2mm" H 2575 5625 50  0001 C CNN
+F 3 "" H 2575 5625 50  0001 C CNN
+	1    3125 5575
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+5V #PWR01
+U 1 1 5EF10600
+P 3075 4900
+F 0 "#PWR01" H 3075 4750 50  0001 C CNN
+F 1 "+5V" H 3090 5073 50  0000 C CNN
+F 2 "" H 3075 4900 50  0001 C CNN
+F 3 "" H 3075 4900 50  0001 C CNN
+	1    3075 4900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3075 4900 3075 5000
+Wire Wire Line
+	3175 5125 3175 5000
+Wire Wire Line
+	3175 5000 3075 5000
+Connection ~ 3075 5000
+Wire Wire Line
+	3075 5000 3075 5125
+$Comp
+L power:GND #PWR02
+U 1 1 5EF1107C
+P 3075 6200
+F 0 "#PWR02" H 3075 5950 50  0001 C CNN
+F 1 "GND" H 3080 6027 50  0000 C CNN
+F 2 "" H 3075 6200 50  0001 C CNN
+F 3 "" H 3075 6200 50  0001 C CNN
+	1    3075 6200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3075 6200 3075 6125
+Wire Wire Line
+	3175 6025 3175 6125
+Wire Wire Line
+	3175 6125 3075 6125
+Connection ~ 3075 6125
+Wire Wire Line
+	3075 6125 3075 6025
+NoConn ~ 2725 5675
+NoConn ~ 2725 5375
+Text GLabel 2500 5575 0    50   Input ~ 0
+TX
+Wire Wire Line
+	2500 5575 2725 5575
+Text GLabel 1250 3375 0    50   Input ~ 0
+RX
+Wire Wire Line
+	1250 3375 1500 3375
+Text GLabel 1275 3875 0    50   Input ~ 0
+GREEN
+Text GLabel 1250 3675 0    50   Input ~ 0
+RED
+Wire Wire Line
+	1275 3875 1500 3875
+Wire Wire Line
+	1500 3675 1250 3675
+Text GLabel 1275 3975 0    50   Input ~ 0
+BUZ1
+Text GLabel 1275 4075 0    50   Input ~ 0
+BUZ2
+Wire Wire Line
+	1275 3975 1500 3975
+Wire Wire Line
+	1500 4075 1275 4075
+Text GLabel 5425 3525 0    50   Input ~ 0
+BUZ1
+Text GLabel 5425 3725 0    50   Input ~ 0
+BUZ2
+Wire Wire Line
+	5425 3725 5625 3725
+Wire Wire Line
+	5625 3525 5425 3525
+Text GLabel 5425 2300 0    50   Input ~ 0
+RED
+Text GLabel 5450 2925 0    50   Input ~ 0
+GREEN
+Wire Wire Line
+	5450 2925 5650 2925
+Wire Wire Line
+	5950 2925 6175 2925
+Wire Wire Line
+	5950 2300 6150 2300
+Wire Wire Line
+	5425 2300 5650 2300
+$Comp
+L power:GND #PWR03
+U 1 1 5EF15F23
+P 6650 3100
+F 0 "#PWR03" H 6650 2850 50  0001 C CNN
+F 1 "GND" H 6655 2927 50  0000 C CNN
+F 2 "" H 6650 3100 50  0001 C CNN
+F 3 "" H 6650 3100 50  0001 C CNN
+	1    6650 3100
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6650 3100 6650 2925
+Wire Wire Line
+	6650 2300 6450 2300
+Wire Wire Line
+	6475 2925 6650 2925
+Connection ~ 6650 2925
+Wire Wire Line
+	6650 2925 6650 2300
+$Comp
+L arduino:ARDUINO_PRO_MINI_5V IC1
+U 1 1 5EF106F6
+P 2300 3875
+F 0 "IC1" H 2275 4716 60  0000 C CNN
+F 1 "ARDUINO_PRO_MINI_5V" H 2275 4822 60  0000 C CNN
+F 2 "Module:pro_mini" H 2300 3875 50  0001 C CNN
+F 3 "" H 2300 3875 50  0001 C CNN
+	1    2300 3875
+	-1   0    0    1   
+$EndComp
+$Comp
+L UsbToSerial:UsbToSerial U1
+U 1 1 5EF15F9F
+P 2300 2025
+F 0 "U1" V 2346 2403 50  0000 L CNN
+F 1 "UsbToSerial" V 2255 2403 50  0000 L CNN
+F 2 "" H 2300 2025 50  0001 C CNN
+F 3 "DOCUMENTATION" H 2300 2025 50  0001 C CNN
+	1    2300 2025
+	0    1    -1   0   
+$EndComp
+$EndSCHEMATC
