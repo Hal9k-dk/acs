@@ -184,9 +184,9 @@ void loop()
                     break;
                 default:
                     Serial.println("ERROR");
-		    break;
+                    break;
                 }
-		Serial.println("OK L");
+                Serial.println("OK L");
                 break;
             case 'C':
                 // Clear screen
