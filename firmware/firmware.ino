@@ -148,7 +148,7 @@ void loop()
     {
         const auto elapsed = millis() - lock_open_tick;
         if (elapsed > LOCK_OPEN_TIME_MS)
-            lock_open_tick = LOCK_CLOSED;
+            lock_state = LOCK_CLOSED;
     }
     
     if (Serial.available())
@@ -174,20 +174,19 @@ void loop()
                 {
                 case '0':
                     lock_state = LOCK_CLOSED;
-                    Serial.println("OK L");
                     break;
                 case '1':
                     lock_state = LOCK_OPEN;
-                    Serial.println("OK L");
                     break;
                 case 'T':
                     lock_state = LOCK_TIMED;
-                    Serial.println("OK L");
                     lock_open_tick = millis();
                     break;
                 default:
-                    Serial.println("OK L");
+                    Serial.println("ERROR");
+		    break;
                 }
+		Serial.println("OK L");
                 break;
             case 'C':
                 // Clear screen
