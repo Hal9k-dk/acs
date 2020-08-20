@@ -1,4 +1,4 @@
-update=Sat 22 Jun 2019 08:02:48 PM CEST
+update=Fri 26 Jun 2020 17:54:15 CEST
 version=1
 last_client=kicad
 [general]
@@ -12,10 +12,20 @@ NetIExt=net
 version=1
 LibDir=
 [eeschema/libraries]
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=Pcbnew
+SpiceAjustPassiveValues=0
+LabSize=50
+ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=
-LastNetListRead=
+LastNetListRead=reader.net
 CopperLayerCount=2
 BoardThickness=1.6
 AllowMicroVias=0
