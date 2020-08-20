@@ -642,9 +642,11 @@ ui.set_reader(reader)
 puts("----\nReady")
 ui.clear();
 
+wdog = File.open('/dev/watchdog', 'w')
+
 while true
   ui.update()
   reader.update()
   sleep 0.1
-  #puts "loop"
+  wdog.ioctl(0x80045705) # WDIOC_KEEPALIVE
 end
