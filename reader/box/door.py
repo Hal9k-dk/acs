@@ -50,7 +50,7 @@ def led_support():
     return cylinder(h=4, d=8)
 
 def led_hole():
-    return down(1)(cylinder(h=10, d=5))
+    return down(1)(cylinder(h=10, d=5.1))
 
 def screw_block(left):
     block = cube([sw, case_h, case_d+front_th])
