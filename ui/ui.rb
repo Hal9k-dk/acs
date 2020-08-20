@@ -403,6 +403,7 @@ class Ui
         if @lock_state != :unlocked
           if is_it_thursday?
             @lock_state = :unlocked
+            @unlocked_at = nil
             @reader.add_log(nil, 'Door unlocked')
           else
             @temp_status_1 = 'It is not'
