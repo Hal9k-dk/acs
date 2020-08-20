@@ -4,6 +4,8 @@ require 'serialport'
 require 'rest-client'
 require 'pg'
 
+$stdout.sync = true
+
 HOST = 'https://127.0.0.1'
 
 LED_ENTER = 'P250R8SGN'
@@ -642,11 +644,17 @@ ui.set_reader(reader)
 puts("----\nReady")
 ui.clear();
 
-wdog = File.open('/dev/watchdog', 'w')
+USE_WDOG = true
+
+if USE_WDOG
+  wdog = File.open('/dev/watchdog', 'w')
+end
 
 while true
   ui.update()
   reader.update()
   sleep 0.1
-  wdog.ioctl(0x80045705) # WDIOC_KEEPALIVE
+  if USE_WDOG
+    wdog.ioctl(0x80045705) # WDIOC_KEEPALIVE
+  end
 end
