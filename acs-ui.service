@@ -3,10 +3,12 @@ Description=ACS UI Service
 
 [Service]
 WorkingDirectory=/home/hal9k/acs/ui
-ExecStart=/home/hal9k/acs/ui/ui.rb
-StandardOutput=null
+ExecStart=/bin/bash -c "cd /home/hal9k/acs/ui; ./ui.sh"
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=acsui
 User=hal9k
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
-Alias=acs-ui.service
