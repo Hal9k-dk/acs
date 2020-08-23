@@ -94,6 +94,21 @@ void make_swserial_work()
     }
 }
 
+void beep(int freq, int duration)
+{
+    int count = ((long) duration)*freq/2000;
+    int del = 500000/freq;
+    for (int i = 0; i < count; ++i)
+    {
+        digitalWrite(PIN_BUZZER1, 0);
+        digitalWrite(PIN_BUZZER2, 1);
+        delayMicroseconds(del);
+        digitalWrite(PIN_BUZZER1, 1);
+        digitalWrite(PIN_BUZZER2, 0);
+        delayMicroseconds(del);
+    }
+}
+
 char current_card[RDM6300::ID_SIZE * 2 + 1] = { 0 };
 bool card_sound_active = false;
 
@@ -190,17 +205,7 @@ void decode_line(const char* line, bool send_reply = true)
                 Serial.println(line);
                 return;
             }
-            int count = ((long) duration)*freq/2000;
-            int del = 500000/freq;
-            for (int i = 0; i < count; ++i)
-            {
-                digitalWrite(PIN_BUZZER1, 0);
-                digitalWrite(PIN_BUZZER2, 1);
-                delayMicroseconds(del);
-                digitalWrite(PIN_BUZZER1, 1);
-                digitalWrite(PIN_BUZZER2, 0);
-                delayMicroseconds(del);
-            }
+            beep(freq, duration);
             Serial.println(F("OK"));
         }
         return;
@@ -350,11 +355,7 @@ void loop()
             swserial_active = false;
             strcpy(current_card, decoder.get_id());
             //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
-            if (!card_sound_active)
-            {
-                card_sound_active = true;
-                //analogWrite(PIN_BUZZER, buzzer_on);
-            }
+            beep(1200, 100);
             make_swserial_work();
         }
     }
