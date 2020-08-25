@@ -29,16 +29,16 @@ def bottom():
     return color(Red)(translate([-(case_w + 2*sw)/2, -case_h/2, 0])(cube([case_w + 2*sw, case_h, front_th])))
 
 def frame():
-    ow = case_w - 2*case_th - .5
-    oh = case_h - 2*case_th
-    fr_h = 5
+    ow = case_w - 2*case_th - 1
+    oh = case_h - 2*case_th - .5
+    fr_h = 7
     outer = translate([-ow/2, -oh/2, front_th])(cube([ow, oh, fr_h]))
     iw = ow - 2*case_th
     ih = oh - 2*case_th
     inner = translate([-iw/2, -ih/2, front_th])(cube([iw, ih, fr_h+2]))
     ch = oh + 2
     cw = 112
-    cutout = translate([-32, -ch/2, front_th + 2])(cube([cw, ch, fr_h]))
+    cutout = translate([-32, -ch/2, front_th + 3.5])(cube([cw, ch, fr_h]))
     return outer-inner - cutout
 
 def screw_hole(left):
@@ -47,12 +47,17 @@ def screw_hole(left):
         offset = -offset
     return translate([-sw/2, -case_h/2, -1])(translate([sw/2+offset, case_h/2, 0])(cylinder(h=case_h+2, r=2)))
 
+def jack_hole():
+    w = 12
+    h = 6
+    return translate([-9.5 - 6, -h/2 + 0.8, -2])(cube([w, h, 10]))
+
 def assembly():
     bt = bottom()
     fr = frame()
     s1 = left(case_w/2+sw/2-0.1)(screw_hole(True))
     s2 = right(case_w/2+sw/2-0.1)(screw_hole(False))
-    return fr + bt - s1 - s2
+    return fr + bt - s1 - s2 - jack_hole()
 
 if __name__ == '__main__':
     a = assembly()
