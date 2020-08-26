@@ -19,6 +19,37 @@ constexpr const int MIN_BEEP_INTERVAL_MS = 1500;
 
 SoftwareSerial swSerial(PIN_RX, PIN_TX);
 
+int beep_duration = 0;
+int beep_interval = 0;
+int beep_duration_left = 0;
+int beep_interval_left = 0;
+int beep_last_tick = 0;
+bool beep_flag = false;
+
+SIGNAL(TIMER2_COMPA_vect) 
+{
+    if (beep_duration_left >= 0)
+    {
+        --beep_duration_left;
+        --beep_interval_left;
+        if (beep_interval_left <= 0)
+        {
+            beep_interval_left = beep_interval;
+            if (beep_flag)
+            {
+                digitalWrite(PIN_BUZZER1, 0);
+                digitalWrite(PIN_BUZZER2, 1);
+            }
+            else
+            {
+                digitalWrite(PIN_BUZZER1, 1);
+                digitalWrite(PIN_BUZZER2, 0);
+            }
+            beep_flag = !beep_flag;
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -29,6 +60,19 @@ void setup()
     pinMode(PIN_RED, OUTPUT);
     pinMode(PIN_BUZZER1, OUTPUT);
     pinMode(PIN_BUZZER2, OUTPUT);
+
+    // set timer2 interrupt at 8kHz
+    TCCR2A = 0;// set entire TCCR2A register to 0
+    TCCR2B = 0;// same for TCCR2B
+    TCNT2  = 0;//initialize counter value to 0
+    // set compare match register for 8khz increments
+    OCR2A = 249;// = (16*10^6) / (8000*8) - 1 (must be <256)
+    // turn on CTC mode
+    TCCR2A |= (1 << WGM21);
+    // Set CS21 bit for 8 prescaler
+    TCCR2B |= (1 << CS21);   
+    // enable timer compare interrupt
+    TIMSK2 |= (1 << OCIE2A);
 }
 
 RDM6300 decoder;
@@ -96,21 +140,13 @@ void make_swserial_work()
 
 void beep(int freq, int duration)
 {
-    int count = ((long) duration)*freq/2000;
-    int del = 500000/freq;
-    for (int i = 0; i < count; ++i)
-    {
-        digitalWrite(PIN_BUZZER1, 0);
-        digitalWrite(PIN_BUZZER2, 1);
-        delayMicroseconds(del);
-        digitalWrite(PIN_BUZZER1, 1);
-        digitalWrite(PIN_BUZZER2, 0);
-        delayMicroseconds(del);
-    }
+    beep_interval = 4000/freq;
+    beep_interval_left = beep_interval;
+    beep_duration = duration*8;
+    beep_duration_left = beep_duration;
 }
 
 char current_card[RDM6300::ID_SIZE * 2 + 1] = { 0 };
-bool card_sound_active = false;
 
 void decode_line(const char* line, bool send_reply = true)
 {
@@ -176,7 +212,6 @@ void decode_line(const char* line, bool send_reply = true)
     case 's':
         // Make sound
         {
-            card_sound_active = false;
             int freq = 0;
             ++i;
             if (!parse_int(line, i, freq))
@@ -185,9 +220,9 @@ void decode_line(const char* line, bool send_reply = true)
                 Serial.println(line);
                 return;
             }
-            if ((freq < 100) || (freq > 10000))
+            if ((freq < 100) || (freq > 8000))
             {
-                Serial.print(F("Frequency must be between 100 and 10000: "));
+                Serial.print(F("Frequency must be between 100 and 8000: "));
                 Serial.println(line);
                 return;
             }
@@ -358,18 +393,14 @@ void loop()
             strcpy(current_card, decoder.get_id());
             //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
             const auto now = millis();
-            if (now - last_beep_tick > MIN_BEEP_INTERVAL_MS)
+            if ((last_beep_tick == 0) ||
+                (now - last_beep_tick > MIN_BEEP_INTERVAL_MS))
             {
                 last_beep_tick = now;
                 beep(1200, 100);
             }
             make_swserial_work();
         }
-    }
-    if (card_sound_active)
-    {
-        //delay(100);
-        //analogWrite(PIN_BUZZER, card_sound_state ? buzzer_on : 0);
     }
 
     delayMicroseconds(100);
