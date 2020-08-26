@@ -12,7 +12,7 @@ const int PIN_RED = 6;
 const int PIN_BUZZER1 = 7;
 const int PIN_BUZZER2 = 8;
 
-
+constexpr const int MIN_BEEP_INTERVAL_MS = 1500;
 
 // 200/500 = boo
 // 900/200 = yay
@@ -343,6 +343,8 @@ const int MAX_LINE_LENGTH = 80;
 char line[MAX_LINE_LENGTH+1];
 int line_len = 0;
 
+unsigned long last_beep_tick = 0;
+
 void loop()
 {
     const int c = swSerial.read();
@@ -355,7 +357,12 @@ void loop()
             swserial_active = false;
             strcpy(current_card, decoder.get_id());
             //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
-            beep(1200, 100);
+            const auto now = millis();
+            if (now - last_beep_tick > MIN_BEEP_INTERVAL_MS)
+            {
+                last_beep_tick = now;
+                beep(1200, 100);
+            }
             make_swserial_work();
         }
     }
