@@ -5,14 +5,14 @@
 #include <RDM6300.h>
 #include <SoftwareSerial.h>
 
-const int PIN_RX = 3;
-const int PIN_TX = A5; // Not connected
-const int PIN_GREEN = 5;
-const int PIN_RED = 6;
-const int PIN_BUZZER1 = 7;
-const int PIN_BUZZER2 = 8;
+static constexpr const int PIN_RX = 3;
+static constexpr const int PIN_TX = A5; // Not connected
+static constexpr const int PIN_GREEN = 5;
+static constexpr const int PIN_RED = 6;
+static constexpr const int PIN_BUZZER1 = 7;
+static constexpr const int PIN_BUZZER2 = 8;
 
-constexpr const int MIN_BEEP_INTERVAL_MS = 1500;
+static constexpr const int MIN_BEEP_INTERVAL_MS = 1500;
 
 // 200/500 = boo
 // 900/200 = yay
@@ -26,33 +26,11 @@ int beep_interval_left = 0;
 int beep_last_tick = 0;
 bool beep_flag = false;
 
-SIGNAL(TIMER2_COMPA_vect) 
-{
-    if (beep_duration_left >= 0)
-    {
-        --beep_duration_left;
-        --beep_interval_left;
-        if (beep_interval_left <= 0)
-        {
-            beep_interval_left = beep_interval;
-            if (beep_flag)
-            {
-                digitalWrite(PIN_BUZZER1, 0);
-                digitalWrite(PIN_BUZZER2, 1);
-            }
-            else
-            {
-                digitalWrite(PIN_BUZZER1, 1);
-                digitalWrite(PIN_BUZZER2, 0);
-            }
-            beep_flag = !beep_flag;
-        }
-    }
-}
+void update_leds();
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(9600);
     swSerial.begin(9600);
 
     pinMode(7, OUTPUT);
@@ -89,8 +67,7 @@ enum class Sequence
 char sequence[MAX_SEQ_SIZE];
 int sequence_len = 0;
 int sequence_index = 0;
-int sequence_period = 10;
-int delay_counter = 0;
+int sequence_period = 80;
 int sequence_repeats = 1; // to force idle sequence on startup
 int sequence_iteration = 0;
 int pwm_max = 64;
@@ -172,14 +149,12 @@ void decode_line(const char* line, bool send_reply = true)
             ++i;
             if (!parse_int(line, i, inten))
             {
-                Serial.print(F("Value must follow I: "));
-                Serial.println(line);
+                Serial.print(F("Value must follow I"));
                 return;
             }
             if ((inten < 1) || (inten > 255))
             {
-                Serial.print(F("Intensity must be between 1 and 255: "));
-                Serial.println(line);
+                Serial.print(F("Intensity must be between 1 and 255"));
                 return;
             }
             pwm_max = inten;
@@ -364,7 +339,7 @@ void decode_line(const char* line, bool send_reply = true)
         ++i;
     }
     sequence_index = 0;
-    sequence_period = 10*period;
+    sequence_period = period*8; // 8 kHz
     sequence_repeats = repeats;
     sequence_iteration = 0;
     for (int i = 0; i < seq_len; ++i)
@@ -374,61 +349,8 @@ void decode_line(const char* line, bool send_reply = true)
         Serial.println(F("OK"));
 }
 
-const int MAX_LINE_LENGTH = 80;
-char line[MAX_LINE_LENGTH+1];
-int line_len = 0;
-
-unsigned long last_beep_tick = 0;
-
-void loop()
+void update_leds()
 {
-    const int c = swSerial.read();
-    if (c > 0)
-    {
-        //Serial.println(c);
-        swserial_active = true;
-        if (decoder.add_byte(c))
-        {
-            swserial_active = false;
-            strcpy(current_card, decoder.get_id());
-            //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
-            const auto now = millis();
-            if ((last_beep_tick == 0) ||
-                (now - last_beep_tick > MIN_BEEP_INTERVAL_MS))
-            {
-                last_beep_tick = now;
-                beep(1200, 100);
-            }
-            make_swserial_work();
-        }
-    }
-
-    delayMicroseconds(100);
-    if (++delay_counter < sequence_period)
-        return;
-    delay_counter = 0;
-
-    if (Serial.available())
-    {
-        const char c = Serial.read();
-        if ((c == '\r') || (c == '\n'))
-        {
-            line[line_len] = 0;
-            line_len = 0;
-            decode_line(line);
-            make_swserial_work();
-        }
-        else if (line_len < MAX_LINE_LENGTH)
-            line[line_len++] = c;
-        else
-        {
-            Serial.print(F("Line too long: "));
-            Serial.println(line);
-            line_len = 0;
-            make_swserial_work();
-        }
-    }
-
     if (sequence_index >= sequence_len)
     {
         sequence_index = 0;
@@ -440,6 +362,7 @@ void loop()
                 analogWrite(PIN_GREEN, 0);
                 analogWrite(PIN_RED, 0);
                 sequence_len = 0;
+                // Idle LED pattern
                 decode_line("P10R0SGX99N", false);
                 return;
             }
@@ -468,4 +391,87 @@ void loop()
             break;
         }
     }
+}
+
+SIGNAL(TIMER2_COMPA_vect) 
+{
+    if (beep_duration_left >= 0)
+    {
+        --beep_duration_left;
+        --beep_interval_left;
+        if (beep_interval_left <= 0)
+        {
+            beep_interval_left = beep_interval;
+            if (beep_flag)
+            {
+                digitalWrite(PIN_BUZZER1, 0);
+                digitalWrite(PIN_BUZZER2, 1);
+            }
+            else
+            {
+                digitalWrite(PIN_BUZZER1, 1);
+                digitalWrite(PIN_BUZZER2, 0);
+            }
+            beep_flag = !beep_flag;
+        }
+    }
+    static int delay_counter = 0;
+    if (++delay_counter < sequence_period)
+        return;
+    delay_counter = 0;
+    update_leds();
+}
+
+const int MAX_LINE_LENGTH = 80;
+char line[MAX_LINE_LENGTH+1];
+int line_len = 0;
+
+unsigned long last_beep_tick = 0;
+
+void loop()
+{
+    delay(100);
+    
+    const int c = swSerial.read();
+    if (c > 0)
+    {
+        //Serial.println(c);
+        swserial_active = true;
+        if (decoder.add_byte(c))
+        {
+            swserial_active = false;
+            strcpy(current_card, decoder.get_id());
+            //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
+            const auto now = millis();
+            if ((last_beep_tick == 0) ||
+                (now - last_beep_tick > MIN_BEEP_INTERVAL_MS))
+            {
+                last_beep_tick = now;
+                beep(1200, 100);
+            }
+            make_swserial_work();
+        }
+    }
+
+    if (Serial.available())
+    {
+        const char c = Serial.read();
+        if ((c == '\r') || (c == '\n'))
+        {
+            line[line_len] = 0;
+            line_len = 0;
+            decode_line(line);
+            make_swserial_work();
+        }
+        else if (line_len < MAX_LINE_LENGTH)
+            line[line_len++] = c;
+        else
+        {
+            Serial.print(F("Line too long: "));
+            Serial.println(line);
+            line_len = 0;
+            make_swserial_work();
+        }
+    }
+
 }
