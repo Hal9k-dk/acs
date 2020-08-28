@@ -123,6 +123,19 @@ void beep(int freq, int duration)
     beep_duration_left = beep_duration;
 }
 
+void set_idle_pattern()
+{
+    // Idle LED pattern: P10R0SGX99N
+    sequence_index = 0;
+    sequence_period = 10*8;
+    sequence_repeats = 0;
+    sequence_iteration = 0;
+    int index = 0;
+    sequence[index++] = (char) Sequence::Green;
+    fill_seq(sequence, index, 99, Sequence::None);
+    sequence_len = index;
+}
+
 char current_card[RDM6300::ID_SIZE * 2 + 1] = { 0 };
 
 void decode_line(const char* line, bool send_reply = true)
@@ -362,8 +375,7 @@ void update_leds()
                 analogWrite(PIN_GREEN, 0);
                 analogWrite(PIN_RED, 0);
                 sequence_len = 0;
-                // Idle LED pattern
-                decode_line("P10R0SGX99N", false);
+                set_idle_pattern();
                 return;
             }
             ++sequence_iteration;
