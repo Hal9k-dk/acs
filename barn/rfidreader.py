@@ -30,6 +30,7 @@ class RfidReader(threading.Thread):
         # Code expires after 10 seconds
         if time.time() - self.last < 10:
             id = self.tag_id
+            self.tag_id = ''
         self.lock.release()
         return id
     
