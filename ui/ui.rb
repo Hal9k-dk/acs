@@ -64,21 +64,20 @@ end
 
 def find_ports()
   r = {}
-  for p in 0..1
+  for p in 0..2
     port = "/dev/ttyUSB#{p}"
     begin
       sp = SerialPort.new(port,
                           { 'baud' => 115200,
                             'data_bits' => 8,
                             'parity' => SerialPort::NONE,
-                            'read_timeout' => 1
+                            'read_timeout' => 10
                           })
       if sp
         puts "Found #{port}"
-        sp.read_timeout = 10
         begin
           while true
-            sleep 5
+            sleep 1
             sp.puts("V")
             sleep 1
             begin
@@ -87,9 +86,6 @@ def find_ports()
             line.strip!
             reply = line.gsub(/[^[:print:]]/i, '')
             puts "Got #{line} -> #{reply}"
-            if reply.empty?
-              break
-            end
             if reply.include? "ACS"
               puts("Version: #{reply}")
               if reply.include? "UI"
@@ -101,11 +97,15 @@ def find_ports()
                 r['reader'] = sp
                 break
               end
+            elsif reply.include? "Danalock"
+              r['lock'] = sp
+              break
             end
           end
         end
       end
-    rescue
+    rescue Exception => e  
+      puts "Exception: #{e}"
       # No port here
     end
   end
@@ -645,7 +645,7 @@ ui.set_reader(reader)
 puts("----\nReady")
 ui.clear();
 
-USE_WDOG = true
+USE_WDOG = false#true
 
 if USE_WDOG
   wdog = File.open('/dev/watchdog', 'w')
