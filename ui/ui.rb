@@ -133,9 +133,11 @@ class Ui
   STATUS_2 = 4
   ENTER_TIME_SECS = 5 # How long to keep the door open after valid card is presented
 
-  def initialize(port)
+  def initialize(port, lock)
     @port = port
+    @lock = lock
     @port.flush_input
+    @lock.flush_input
     @lock_state = :locked
     @unlock_time = nil
     if !$opensmart
@@ -267,11 +269,48 @@ class Ui
     end
   end
 
+  def lock_wait_response(cmd, response)
+    # Skip echo
+    while true
+      c = @lock.getc
+      if c.ord == 10
+        puts "got LF"
+        break
+      end
+    end
+    reply = ''
+    while true
+      c = @lock.getc
+      if c
+        if c.ord == 13
+          next
+        end
+        if c.ord == 10 && !reply.empty?
+          puts "got LF"
+          break
+        end
+        reply = reply + c
+      end
+    end
+    puts "Lock reply: #{reply}"
+    if reply != "OK: #{response}"
+      puts "ERROR: Expected 'OK #{response}', got '#{reply.inspect}' (in response to #{cmd})"
+      Process.exit()
+    end
+  end
+
   def send_and_wait(s)
     #puts("Sending #{s}")
     @port.flush_input()
     @port.puts(s)
     wait_response(s)
+  end
+
+  def lock_send_and_wait(s)
+    puts("Lock: Sending #{s}")
+    @lock.flush_input()
+    @lock.puts(s)
+    lock_wait_response(s, "#{s}ed")
   end
 
   def read_keys()
@@ -313,7 +352,7 @@ class Ui
         puts "Lock again"
         @lock_state = :locked
       else
-        send_and_wait("LT")
+        send_and_wait("LT") #!!
         col = 'blue'
         s1 = 'Enter'
         s2 = @who
@@ -323,7 +362,7 @@ class Ui
     if @lock_state == :unlocking
       # nop
     elsif @lock_state == :locked
-      send_and_wait("L0")
+      lock_send_and_wait("lock")
       col = 'orange'
       s1 = 'Locked'
     elsif @lock_state == :unlocked
@@ -337,7 +376,7 @@ class Ui
         @reader.advertise_open()
       end
     elsif @lock_state == :timed_unlock
-      send_and_wait("L1")
+      lock_send_and_wait("unlock")
       col = 'green'
       s1 = 'Open for'
       locking_at = @unlocked_at + UNLOCK_PERIOD_S
@@ -628,7 +667,7 @@ if !ports['ui']
   Process.exit
 end
 
-ui = Ui.new(ports['ui'])
+ui = Ui.new(ports['ui'], ports['lock'])
 ui.clear();
 
 if !ports['reader']
