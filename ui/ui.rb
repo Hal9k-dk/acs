@@ -131,7 +131,7 @@ class Ui
   # Display lines for lock status
   STATUS_1 = 2
   STATUS_2 = 4
-  ENTER_TIME_SECS = 5 # How long to keep the door open after valid card is presented
+  ENTER_TIME_SECS = 30 # How long to keep the door open after valid card is presented
 
   def initialize(port, lock)
     @port = port
@@ -352,7 +352,7 @@ class Ui
         puts "Lock again"
         @lock_state = :locked
       else
-        send_and_wait("LT") #!!
+        lock_send_and_wait("unlock")
         col = 'blue'
         s1 = 'Enter'
         s2 = @who
