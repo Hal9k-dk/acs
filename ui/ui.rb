@@ -78,10 +78,12 @@ def find_ports()
         begin
           while true
             sleep 1
+            puts "Send V"
             sp.puts("V")
             sleep 1
             begin
               line = sp.gets
+              puts "Got #{line}"
             end while !line || line.empty?
             line.strip!
             reply = line.gsub(/[^[:print:]]/i, '')
@@ -134,12 +136,6 @@ class Ui
   ENTER_TIME_SECS = 30 # How long to keep the door open after valid card is presented
 
   def initialize(port, lock)
-    @port = port
-    @lock = lock
-    @port.flush_input
-    @lock.flush_input
-    @lock_state = :locked
-    @unlock_time = nil
     if !$opensmart
       @color_map = [
         'white',
@@ -201,6 +197,26 @@ class Ui
         'yellow'
       ]
     end
+    @port = port
+    @lock = lock
+    @port.flush_input
+    @lock.flush_input
+    resp = lock_send_and_wait("lock")
+    if !resp[0]
+      if resp[1].include? "not calibrated"
+        #!! beep beep motherfucker
+        clear();
+        write(true, false, 2, 'CALIBRATING LOCK', 'red')
+        puts "Calibrating lock"
+        resp = lock_send_and_wait("calibrate")
+        if !resp[0]
+          lock_is_faulty(resp[1])
+        end
+        clear();
+      end
+    end
+    @lock_state = :locked
+    @unlock_time = nil
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
@@ -216,6 +232,16 @@ class Ui
 
   def set_reader(reader)
     @reader = reader
+  end
+
+  def lock_is_faulty(reply)
+    clear();
+    write(true, false, 0, 'FATAL ERROR:', 'red')
+    write(true, false, 1, 'LOCK REPLY:', 'red')
+    write(true, false, 3, reply, 'red')
+    puts("Fatal error: lock said #{reply}")
+    #!! beep
+    Process.exit
   end
   
   def clear()
@@ -293,10 +319,11 @@ class Ui
       end
     end
     puts "Lock reply: #{reply}"
-    if reply != "OK: #{response}"
-      puts "ERROR: Expected 'OK #{response}', got '#{reply.inspect}' (in response to #{cmd})"
-      Process.exit()
+    if reply[0..1] != "OK"
+      puts "ERROR: Expected 'OK', got '#{reply.inspect}' (in response to #{cmd})"
+      return [ false, reply ]
     end
+    return [ true, reply ]
   end
 
   def send_and_wait(s)
@@ -310,7 +337,7 @@ class Ui
     puts("Lock: Sending #{s}")
     @lock.flush_input()
     @lock.puts(s)
-    lock_wait_response(s, "#{s}ed")
+    return lock_wait_response(s, "#{s}ed")
   end
 
   def read_keys()
@@ -352,7 +379,8 @@ class Ui
         puts "Lock again"
         @lock_state = :locked
       else
-        lock_send_and_wait("unlock")
+        resp = lock_send_and_wait("unlock")
+        #!!
         col = 'blue'
         s1 = 'Enter'
         s2 = @who
@@ -362,7 +390,8 @@ class Ui
     if @lock_state == :unlocking
       # nop
     elsif @lock_state == :locked
-      lock_send_and_wait("lock")
+      res = lock_send_and_wait("lock")
+      #!!
       col = 'orange'
       s1 = 'Locked'
     elsif @lock_state == :unlocked
@@ -376,7 +405,8 @@ class Ui
         @reader.advertise_open()
       end
     elsif @lock_state == :timed_unlock
-      lock_send_and_wait("unlock")
+      res = lock_send_and_wait("unlock")
+      #!!
       col = 'green'
       s1 = 'Open for'
       locking_at = @unlocked_at + UNLOCK_PERIOD_S
@@ -395,9 +425,9 @@ class Ui
         @reader.advertise_open()
       end
     else
-      ui.clear();
-      ui.write(true, false, 2, 'FATAL ERROR:', 'red')
-      ui.write(true, false, 4, 'UNKNOWN LOCK STATE', 'red')
+      clear();
+      write(true, false, 2, 'FATAL ERROR:', 'red')
+      write(true, false, 4, 'UNKNOWN LOCK STATE', 'red')
       puts("Fatal error: Unknown lock state")
       Process.exit
     end
