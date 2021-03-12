@@ -19,6 +19,11 @@ LED_LOW_INTEN = 'I20'
 LED_MED_INTEN = 'I50'
 LED_HIGH_INTEN = 'I100'
 
+SOUND_UNCALIBRATED = 'S500 500'
+SOUND_CANNOT_LOCK = 'S2500 100'
+SOUND_LOCK_FAULTY1 = 'S800 200'
+SOUND_LOCK_FAULTY2 = 'S1500 150'
+
 # How many seconds green key must be held down to activate timed unlock
 UNLOCK_KEY_TIME = 0.1
 # How many seconds green key must be held down to activate Thursday mode
@@ -197,24 +202,6 @@ class Ui
         'yellow'
       ]
     end
-    @port = port
-    @lock = lock
-    @port.flush_input
-    @lock.flush_input
-    resp = lock_send_and_wait("lock")
-    if !resp[0]
-      if resp[1].include? "not calibrated"
-        #!! beep beep motherfucker
-        clear();
-        write(true, false, 2, 'CALIBRATING LOCK', 'red')
-        puts "Calibrating lock"
-        resp = lock_send_and_wait("calibrate")
-        if !resp[0]
-          lock_is_faulty(resp[1])
-        end
-        clear();
-      end
-    end
     @lock_state = :locked
     @unlock_time = nil
     @last_time = ''
@@ -228,6 +215,27 @@ class Ui
     @temp_status_colour = ''
     @temp_status_at = nil
     @who = nil
+    @port = port
+    @lock = lock
+    @port.flush_input
+    @lock.flush_input
+  end
+
+  def phase2init()
+    resp = lock_send_and_wait("lock")
+    if !resp[0]
+      if resp[1].include? "not calibrated"
+        @reader.send(SOUND_UNCALIBRATED)
+        clear();
+        write(true, false, 2, 'CALIBRATING LOCK', 'red')
+        puts "Calibrating lock"
+        resp = lock_send_and_wait("calibrate")
+        if !resp[0]
+          lock_is_faulty(resp[1])
+        end
+        clear();
+      end
+    end
   end
 
   def set_reader(reader)
@@ -240,8 +248,12 @@ class Ui
     write(true, false, 1, 'LOCK REPLY:', 'red')
     write(true, false, 3, reply, 'red')
     puts("Fatal error: lock said #{reply}")
-    #!! beep
-    Process.exit
+    while true
+      @reader.send(SOUND_LOCK_FAULTY1)
+      sleep(0.5)
+      @reader.send(SOUND_LOCK_FAULTY2)
+      sleep(0.8)
+    end
   end
   
   def clear()
@@ -390,8 +402,17 @@ class Ui
     if @lock_state == :unlocking
       # nop
     elsif @lock_state == :locked
-      res = lock_send_and_wait("lock")
-      #!!
+      resp = lock_send_and_wait("lock")
+      if !resp[0]
+        clear();
+        write(true, false, 0, 'ERROR:', 'red')
+        write(true, false, 1, 'CANNOT LOCK', 'red')
+        write(true, false, 3, resp[1], 'red')
+        for i in 0..15
+          @reader.send(SOUND_CANNOT_LOCK)
+          sleep(0.3)
+        end
+      end
       col = 'orange'
       s1 = 'Locked'
     elsif @lock_state == :unlocked
@@ -711,10 +732,12 @@ reader = CardReader.new(ports['reader'])
 reader.set_ui(ui)
 ui.set_reader(reader)
 
+ui.phase2init()
+
 puts("----\nReady")
 ui.clear();
 
-USE_WDOG = false#true
+USE_WDOG = false #true
 
 if USE_WDOG
   wdog = File.open('/dev/watchdog', 'w')
