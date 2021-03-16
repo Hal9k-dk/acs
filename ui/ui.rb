@@ -210,6 +210,7 @@ class Ui
     @last_status_1 = nil
     @last_status_2 = nil
     @reader = nil
+    @slack = nil
     @temp_status_1 = ''
     @temp_status_2 = ''
     @temp_status_colour = ''
@@ -254,6 +255,10 @@ class Ui
       @reader.send(SOUND_LOCK_FAULTY2)
       sleep(0.8)
     end
+  end
+  
+  def set_slack(slack)
+    @slack = slack
   end
   
   def clear()
@@ -712,6 +717,27 @@ class CardReader
 
 end # end CardReader
 
+class Slack
+  def initialize()
+    @token = File.read('slack-token')
+  end
+
+  def send_message(msg)
+    uri = URI.parse("https://slack.com/api/chat.postMessage")
+    request = Net::HTTP::Post.new(uri)
+    request.content_type = "application/json"
+    request["Authorization"] = "Bearer #{@token}"
+    body = { channel: "monitoring", icon_emoji: ":panopticon:", parse: "full", "text": msg }
+    request.body = JSON.generate(body)
+    req_options = {
+      use_ssl: uri.scheme == "https",
+    }
+    response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+      http.request(request)
+    end
+  end
+end # end Slack
+
 ports = find_ports()
 if !ports['ui']
   puts("Fatal error: No UI found")
@@ -733,6 +759,9 @@ reader.set_ui(ui)
 ui.set_reader(reader)
 
 ui.phase2init()
+
+slack = Slack.new()
+ui.set_slack(slack)
 
 puts("----\nReady")
 ui.clear();
