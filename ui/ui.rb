@@ -228,6 +228,8 @@ class Ui
     @lock_time = nil
     # Whether to show remaining time on display
     @advertise_remaining_time = false
+    # One-shot function to call after locking
+    @after_lock_fn = nil
     @in_thursday_mode = false
     @port = port
     @lock = lock
@@ -297,7 +299,7 @@ class Ui
     @desired_lock_state = :unlocked
     @lock_time = Time.now + ENTER_TIME_SECS
     @advertise_remaining_time = false
-    set_temp_status('Enter', @who, 'blue')
+    @after_lock_fn = lambda { set_temp_status('Enter', @who, 'blue') }
   end
 
   def set_temp_status(s1, s2 = '', colour = '')
@@ -451,11 +453,17 @@ class Ui
       what = ''
       case @desired_lock_state
       when :unlocked
+        callback = nil
         if @actual_lock_state == :locked
+          callback = @after_lock_fn
+          @after_lock_fn = nil
           clear();
           write(true, false, 2, 'Unlocking', 'blue')
         end
         resp = lock_send_and_wait("unlock")
+        if callback
+          callback.call
+        end
         what = 'LOCK'
       when :locked
         if @actual_lock_state == :unlocked
