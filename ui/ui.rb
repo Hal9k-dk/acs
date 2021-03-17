@@ -1,4 +1,8 @@
 #!/usr/bin/ruby
+
+# TODO:
+# - reset ports
+
 require 'optparse'
 require 'serialport'
 require 'rest-client'
@@ -202,8 +206,12 @@ class Ui
         'yellow'
       ]
     end
-    @lock_state = :locked
-    @unlock_time = nil
+    # locked -> unlocked
+    # unlocked -> locked
+    # locked -> manual
+    # unlocked -> manual
+    @desired_lock_state = :unknown
+    @actual_lock_state = :unknown
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
@@ -216,6 +224,11 @@ class Ui
     @temp_status_colour = ''
     @temp_status_at = nil
     @who = nil
+    # When to automatically lock again
+    @lock_time = nil
+    # Whether to show remaining time on display
+    @advertise_remaining_time = false
+    @in_thursday_mode = false
     @port = port
     @lock = lock
     @port.flush_input
@@ -237,6 +250,7 @@ class Ui
         clear();
       end
     end
+    @actual_lock_state = @desired_lock_state = :locked
   end
 
   def set_reader(reader)
@@ -276,12 +290,14 @@ class Ui
   end
 
   def unlock(who)
-    if @lock_state == :timed_unlock || @lock_state == :unlocked
+    if @desired_lock_state == :unlocked
       return
     end
     @who = who
-    @lock_state = :unlocking
-    @unlock_time = Time.now
+    @desired_lock_state = :unlocked
+    @lock_time = Time.now + ENTER_TIME_SECS
+    @advertise_remaining_time = false
+    set_temp_status('Enter', @who, 'blue')
   end
 
   def set_temp_status(s1, s2 = '', colour = '')
@@ -312,12 +328,11 @@ class Ui
     end
   end
 
-  def lock_wait_response(cmd, response)
+  def lock_wait_response(cmd)
     # Skip echo
     while true
       c = @lock.getc
       if c.ord == 10
-        puts "got LF"
         break
       end
     end
@@ -329,7 +344,6 @@ class Ui
           next
         end
         if c.ord == 10 && !reply.empty?
-          puts "got LF"
           break
         end
         reply = reply + c
@@ -354,7 +368,7 @@ class Ui
     puts("Lock: Sending #{s}")
     @lock.flush_input()
     @lock.puts(s)
-    return lock_wait_response(s, "#{s}ed")
+    return lock_wait_response(s)
   end
 
   def read_keys()
@@ -384,83 +398,217 @@ class Ui
       return reply[1] == '1', reply[2] == '1'
     end
   end
-  
-  def update()
-    # Lock state
-    col = 'green'
-    s1 = ''
-    s2 = ''
-    if @lock_state == :unlocking
-      elapsed = Time.now - @unlock_time
-      if elapsed > ENTER_TIME_SECS
-        puts "Lock again"
-        @lock_state = :locked
-      else
-        resp = lock_send_and_wait("unlock")
-        #!!
-        col = 'blue'
-        s1 = 'Enter'
-        s2 = @who
+
+  def get_lock_status()
+    resp = lock_send_and_wait('status')
+    if !resp[0]
+      puts("ERROR: Could not get status from lock: #{resp[1]}")
+      return
+    end
+    status = resp[1].split(' ')[2]
+    puts("Lock status #{status}")
+    case status
+    when 'unknown'
+      puts("ERROR: Lock status is unknown")
+      #!!
+    when 'locked'
+      @actual_lock_state = :locked
+    when 'unlocked'
+      @actual_lock_state = :unlocked
+    when /manual/
+      @actual_lock_state = :manual
+    else
+      puts("ERROR: Lock status is '#{status}'")
+      #!!
+    end
+    puts("Actual lock status #{@actual_lock_state}")
+  end
+
+  def check_should_lock()
+    # Check if door is unlocked and enter time has elapsed
+    if @desired_lock_state == :unlocked &&
+       @lock_time &&
+       Time.now >= @lock_time
+      puts "Time elapsed, locking again"
+      @desired_lock_state = :locked
+    end
+
+    # Check if Thursday mode has expired
+    if @desired_lock_state == :unlocked
+      if @in_thursday_mode && !is_it_thursday?
+        puts "Locking, no longer Thursday"
+        @in_thursday_mode = false
+        @desired_lock_state = :locked
       end
     end
-    
-    if @lock_state == :unlocking
-      # nop
-    elsif @lock_state == :locked
-      resp = lock_send_and_wait("lock")
+  end
+
+  def synchronize_lock_state()
+    if @actual_lock_state == :manual
+      # We are in manual override  - should we do anything?
+      #!!
+    else
+      what = ''
+      case @desired_lock_state
+      when :unlocked
+        if @actual_lock_state == :locked
+          clear();
+          write(true, false, 2, 'Unlocking', 'blue')
+        end
+        resp = lock_send_and_wait("unlock")
+        what = 'LOCK'
+      when :locked
+        if @actual_lock_state == :unlocked
+          clear();
+          write(true, false, 2, 'Locking', 'orange')
+        end
+        resp = lock_send_and_wait("lock")
+        what = 'UNLOCK'
+      end
       if !resp[0]
         clear();
         write(true, false, 0, 'ERROR:', 'red')
-        write(true, false, 1, 'CANNOT LOCK', 'red')
+        write(true, false, 1, "CANNOT #{what}", 'red')
         write(true, false, 3, resp[1], 'red')
         for i in 0..15
           @reader.send(SOUND_CANNOT_LOCK)
           sleep(0.3)
         end
       end
+    end
+  end
+
+  def check_buttons()
+    if $opensmart
+      green, white, red = read_keys()
+      if red
+        puts "Red pressed at #{Time.now}"
+        # Lock
+        if @desired_lock_state != :locked
+          @desired_lock_state = :locked
+          @unlocked_at = nil
+          @reader.add_log(nil, 'Door locked')
+        end
+      elsif green
+        puts "Green pressed"
+        # Unlock for UNLOCK_PERIOD_S
+        if @desired_lock_state != :unlocked
+          @desired_lock_state = :unlocked
+          @lock_time = Time.now + UNLOCK_PERIOD_S
+          @advertise_remaining_time = true
+          @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
+          puts("Door unlocked, will lock again at #{@lock_time}")
+        end
+      elsif white
+        puts "White pressed"
+        # Enter Thursday mode
+        if is_it_thursday?
+          @desired_lock_state = :unlocked
+          @lock_time = nil
+          @advertise_remaining_time = false
+          @in_thursday_mode = true
+          @reader.add_log(nil, 'Enter Thursday mode')
+        else
+          @temp_status_1 = 'It is not'
+          @temp_status_2 = 'Thursday yet'
+          @temp_status_at = Time.now
+        end
+      end
+    else
+      # Not OpenSmart
+      # Note: Not updated for Danalock!
+      red, green = read_keys()
+      if red
+        if @desired_lock_state != :locked
+          @reader.add_log(nil, 'Door locked')
+        end
+        @desired_lock_state = :locked
+        @unlocked_at = nil
+      elsif green && @desired_lock_state != :unlocked
+        if !@green_pressed_at
+          @green_pressed_at = Time.now
+        end
+      else
+        if @green_pressed_at
+          # Release
+          green_pressed_for = Time.now - @green_pressed_at
+          if green_pressed_for >= THURSDAY_KEY_TIME
+            if is_it_thursday?
+              @desired_lock_state = :unlocked
+              @reader.add_log(nil, 'Door unlocked')
+            else
+              @temp_status_1 = 'It is not'
+              @temp_status_2 = 'Thursday yet'
+              @temp_status_at = Time.now
+            end
+          elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
+            @desired_lock_state = :unlocked
+            @unlocked_at = Time.now
+            @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
+            puts("Unlocked at #{@unlocked_at}")
+          end
+        end
+        @green_pressed_at = nil
+      end
+    end
+  end
+  
+  def update()
+    # Update @actual_lock_state
+    get_lock_status()
+    
+    # Check if it is time to lock again
+    check_should_lock()
+
+    if @desired_lock_state == :unlocked
+      @reader.advertise_open()
+    end
+
+    # Try to make actual lock state match desired lock state
+    synchronize_lock_state()
+
+    col = ''
+    s1 = ''
+    s2 = ''
+    case @desired_lock_state
+    when :locked
       col = 'orange'
       s1 = 'Locked'
-    elsif @lock_state == :unlocked
-      if !is_it_thursday?
-        puts "Locking, no longer Thursday"
-        @lock_state = :locked
-      else
-        send_and_wait("L1")
-        col = 'green'
-        s1 = 'Open'
-        @reader.advertise_open()
-      end
-    elsif @lock_state == :timed_unlock
-      res = lock_send_and_wait("unlock")
-      #!!
+    when :unlocked
       col = 'green'
-      s1 = 'Open for'
-      locking_at = @unlocked_at + UNLOCK_PERIOD_S
-      secs_left = (locking_at - Time.now).to_i
-      mins_left = (secs_left/60.0).ceil
-      #puts "Left: #{mins_left}m #{secs_left}s"
-      if mins_left > 1
-        s2 = "#{mins_left} minutes"
+      if @advertise_remaining_time
+        s1 = 'Open for'
+        secs_left = (@lock_time - Time.now).to_i
+        mins_left = (secs_left/60.0).ceil
+        #puts "Left: #{mins_left}m #{secs_left}s"
+        if mins_left > 1
+          s2 = "#{mins_left} minutes"
+        else
+          s2 = "#{secs_left} seconds"
+        end
+        if secs_left <= UNLOCK_WARN_S
+          col = 'orange'
+          @reader.warn_closing()
+        else
+          @reader.advertise_open()
+        end
       else
-        s2 = "#{secs_left} seconds"
-      end
-      if secs_left <= UNLOCK_WARN_S
-        col = 'orange'
-        @reader.warn_closing()
-      else
+        s1 = 'Open'
         @reader.advertise_open()
       end
     else
       clear();
       write(true, false, 2, 'FATAL ERROR:', 'red')
       write(true, false, 4, 'UNKNOWN LOCK STATE', 'red')
-      puts("Fatal error: Unknown lock state")
+      puts("Fatal error: Unknown desired lock state '#{@desired_lock_state}'")
       Process.exit
     end
+
     if !@temp_status_1.empty?
       shown_for = Time.now - @temp_status_at
       if shown_for > TEMP_STATUS_SHOWN_FOR
         @temp_status_1 = ''
+        puts("Clear temp status")
       else
         s1 = @temp_status_1
         s2 = @temp_status_2
@@ -477,83 +625,9 @@ class Ui
       write(true, true, STATUS_2, s2, col)
       @last_status_2 = s2
     end
-    # Buttons
-    if $opensmart
-      green, white, red = read_keys()
-      if red
-        puts "Red pressed at #{Time.now}"
-        if @lock_state != :locked
-          @lock_state = :locked
-          @unlocked_at = nil
-          @reader.add_log(nil, 'Door locked')
-        end
-      elsif green
-        puts "Green pressed"
-        if @lock_state != :timed_unlock
-          @lock_state = :timed_unlock
-          @unlocked_at = Time.now
-          @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
-          puts("Unlocked at #{@unlocked_at}")
-        end
-      elsif white
-        puts "White pressed"
-        if @lock_state != :unlocked
-          if is_it_thursday?
-            @lock_state = :unlocked
-            @unlocked_at = nil
-            @reader.add_log(nil, 'Door unlocked')
-          else
-            @temp_status_1 = 'It is not'
-            @temp_status_2 = 'Thursday yet'
-            @temp_status_at = Time.now
-          end
-        end
-      end
-    else
-      # Not OpenSmart
-      red, green = read_keys()
-      if red
-        if @lock_state != :locked
-          @reader.add_log(nil, 'Door locked')
-        end
-        @lock_state = :locked
-        @unlocked_at = nil
-      elsif green && @lock_state != :unlocked
-        if !@green_pressed_at
-          @green_pressed_at = Time.now
-        end
-      else
-        if @green_pressed_at
-          # Release
-          green_pressed_for = Time.now - @green_pressed_at
-          if green_pressed_for >= THURSDAY_KEY_TIME
-            if is_it_thursday?
-              @lock_state = :unlocked
-              @reader.add_log(nil, 'Door unlocked')
-            else
-              @temp_status_1 = 'It is not'
-              @temp_status_2 = 'Thursday yet'
-              @temp_status_at = Time.now
-            end
-          elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
-            @lock_state = :timed_unlock
-            @unlocked_at = Time.now
-            @reader.add_log(nil, "Door unlocked for #{UNLOCK_PERIOD_S} s")
-            puts("Unlocked at #{@unlocked_at}")
-          end
-        end
-        @green_pressed_at = nil
-      end
-    end
-    # Automatic locking
-    if @unlocked_at
-      unlocked_for = Time.now - @unlocked_at
-      if unlocked_for >= UNLOCK_PERIOD_S
-        puts "Unlocked for #{unlocked_for}"
-        @unlocked_at = nil
-        @lock_state = :locked
-      end
-    end
+
+    check_buttons()
+    
     # Time display
     ct = DateTime.now.to_time.strftime("%H:%M")
     if ct != @last_time
