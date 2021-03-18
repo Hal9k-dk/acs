@@ -2,6 +2,7 @@
 
 # TODO:
 # - reset ports
+# - start when fully locked -> manual
 
 require 'optparse'
 require 'serialport'
@@ -37,6 +38,8 @@ TEMP_STATUS_SHOWN_FOR = 5
 
 UNLOCK_PERIOD_S = 15*60
 UNLOCK_WARN_S = 5*60
+
+MANUAL_WARN_SECS = 60
 
 $q = Queue.new
 $api_key = File.read('apikey.txt').strip()
@@ -212,6 +215,7 @@ class Ui
     # unlocked -> manual
     @desired_lock_state = :unknown
     @actual_lock_state = :unknown
+    @manual_mode_at = nil
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
@@ -367,7 +371,7 @@ class Ui
   end
 
   def lock_send_and_wait(s)
-    puts("Lock: Sending #{s}")
+    #puts("Lock: Sending #{s}")
     @lock.flush_input()
     @lock.puts(s)
     return lock_wait_response(s)
@@ -412,7 +416,7 @@ class Ui
     case status
     when 'unknown'
       puts("ERROR: Lock status is unknown")
-      #!!
+      @slack.set_status("Lock status is unknown")
     when 'locked'
       @actual_lock_state = :locked
     when 'unlocked'
@@ -421,9 +425,9 @@ class Ui
       @actual_lock_state = :manual
     else
       puts("ERROR: Lock status is '#{status}'")
-      #!!
+      @slack.set_status("Lock status is '#{status}', how did that happen?")
     end
-    puts("Actual lock status #{@actual_lock_state}")
+    #puts("Actual lock status #{@actual_lock_state}")
   end
 
   def check_should_lock()
@@ -447,9 +451,15 @@ class Ui
 
   def synchronize_lock_state()
     if @actual_lock_state == :manual
-      # We are in manual override  - should we do anything?
-      #!!
+      # We are in manual override - check duration
+      if !@manual_mode_at
+        @manual_mode_at = Time.now
+      end
+      if Time.now - @manual_mode_at > MANUAL_WARN_SECS
+        @slack.set_status("Lock was set in manual mode at #{@manual_mode_at}")
+      end
     else
+      @manual_mode_at = nil
       what = ''
       case @desired_lock_state
       when :unlocked
@@ -802,9 +812,23 @@ end # end CardReader
 class Slack
   def initialize()
     @token = File.read('slack-token')
+    @last_status = ''
   end
 
+  def set_status(status)
+    if status != @last_status
+      send_message(status)
+      @last_status = status
+    end
+  end
+
+  def get_status()
+    @last_status
+  end
+  
   def send_message(msg)
+    puts "SLACK: #{msg}"
+    #return
     uri = URI.parse("https://slack.com/api/chat.postMessage")
     request = Net::HTTP::Post.new(uri)
     request.content_type = "application/json"
