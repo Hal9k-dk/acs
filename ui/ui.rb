@@ -5,9 +5,10 @@
 # - start when fully locked -> manual
 
 require 'optparse'
-require 'serialport'
-require 'rest-client'
 require 'pg'
+require 'rest-client'
+require 'serialport'
+require 'tzinfo'
 
 $stdout.sync = true
 
@@ -39,12 +40,14 @@ TEMP_STATUS_SHOWN_FOR = 5
 UNLOCK_PERIOD_S = 15*60
 UNLOCK_WARN_S = 5*60
 
-MANUAL_WARN_SECS = 60
+MANUAL_WARN_SECS = 5*60
 
 $q = Queue.new
 $api_key = File.read('apikey.txt').strip()
 $db_pass = File.read('dbpass.txt').strip()
 $opensmart = false
+
+$tz = TZInfo::Timezone.get('Europe/Copenhagen')
 
 log_thread = Thread.new do
   puts "Thread start"
@@ -127,7 +130,7 @@ def find_ports()
 end
 
 def is_it_thursday?
-  return (Date.today.strftime("%A") == 'Thursday') && (Time.now.hour >= 15);
+  return (Date.today.strftime("%A") == 'Thursday') && ($tz.utc_to_local(Time.now).hour >= 15);
 end
 
 def get_led_inten_cmd
@@ -215,7 +218,10 @@ class Ui
     # unlocked -> manual
     @desired_lock_state = :unknown
     @actual_lock_state = :unknown
+    @manual_lock_state = nil
     @manual_mode_at = nil
+    @manual_mode_unlocked = false
+    @override_manual = false
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
@@ -419,10 +425,19 @@ class Ui
       @slack.set_status("Lock status is unknown")
     when 'locked'
       @actual_lock_state = :locked
+      @manual_lock_state = nil
     when 'unlocked'
       @actual_lock_state = :unlocked
+      @manual_lock_state = nil
     when /manual/
       @actual_lock_state = :manual
+      if status.start_with? 'locked'
+        @manual_lock_state = :locked
+      elsif status.start_with? 'unlocked'
+        @manual_lock_state = :unlocked
+      else
+        @manual_lock_state = :unknown
+      end
     else
       puts("ERROR: Lock status is '#{status}'")
       @slack.set_status("Lock status is '#{status}', how did that happen?")
@@ -450,15 +465,34 @@ class Ui
   end
 
   def synchronize_lock_state()
+    if @override_manual
+      @actual_lock_state = :unknown
+      @override_manual = false
+    end
     if @actual_lock_state == :manual
       # We are in manual override - check duration
       if !@manual_mode_at
+        # Enter manual mode
         @manual_mode_at = Time.now
+        @manual_mode_unlocked = true
       end
-      if Time.now - @manual_mode_at > MANUAL_WARN_SECS
-        @slack.set_status("Lock was set in manual mode at #{@manual_mode_at}")
+      if @manual_lock_state != :locked
+        @manual_mode_unlocked = true
+        if Time.now - @manual_mode_at > MANUAL_WARN_SECS
+          # We have been in manual mode for more than MANUAL_WARN_SECS, and are still not locked
+          @slack.set_status("Lock is in manual mode since #{$tz.utc_to_local(@manual_mode_at).to_s()[0..19]}")
+        end
+      else
+        # Manually locked
+        if @manual_mode_unlocked
+          @slack.set_status("Lock has been manually locked")
+          @manual_mode_unlocked = false
+        end
       end
     else
+      if @manual_mode_at
+        @slack.set_status("Lock has returned to automatic mode")
+      end
       @manual_mode_at = nil
       what = ''
       case @desired_lock_state
@@ -496,12 +530,18 @@ class Ui
     end
   end
 
+  def return_to_auto()
+    @manual_lock_state = nil
+    @override_manual = true
+  end
+  
   def check_buttons()
     if $opensmart
       green, white, red = read_keys()
       if red
         puts "Red pressed at #{Time.now}"
         # Lock
+        return_to_auto()
         if @desired_lock_state != :locked
           @desired_lock_state = :locked
           @unlocked_at = nil
@@ -509,6 +549,7 @@ class Ui
         end
       elsif green
         puts "Green pressed"
+        return_to_auto()
         # Unlock for UNLOCK_PERIOD_S
         if @desired_lock_state != :unlocked
           @desired_lock_state = :unlocked
@@ -521,6 +562,7 @@ class Ui
         puts "White pressed"
         # Enter Thursday mode
         if is_it_thursday?
+          return_to_auto()
           @desired_lock_state = :unlocked
           @lock_time = nil
           @advertise_remaining_time = false
