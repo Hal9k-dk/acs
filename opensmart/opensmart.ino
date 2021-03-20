@@ -16,7 +16,9 @@ MCUFRIEND_kbv tft;
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#include "animater.h"
+#ifdef USE_ANIMATER
+#  include "animater.h"
+#endif
 
 const char* version = "1.1.0";
 
@@ -27,13 +29,19 @@ const int TFT_BRIGHTNESS = 200;
 const int screen_height = 240;
 const int screen_width = 400;
    
+#ifdef USE_ANIMATER
 const int lcd_top = 38;
+#else
+const int lcd_top = 0;
+#endif
 const int lcd_line_height_large = 30;
 const int lcd_line_height_small = 16;
 const int lcd_last_large_line = (screen_height - lcd_top)/lcd_line_height_large - 1;
 const int lcd_last_small_line = (screen_height - lcd_top)/lcd_line_height_small - 1;
-  
+
+#ifdef USE_ANIMATER
 Animater anim(tft);
+#endif
 
 void setup()
 {
@@ -107,7 +115,6 @@ void loop()
     // R1/R4: 512
     // R2/R4: 704
     // R3/R4: 856
-
     if (!key_pressed[0] && !key_pressed[1] && !key_pressed[2])
     {
         if (sw < 522 && sw > 502)
@@ -135,12 +142,14 @@ void loop()
 
             case 'C':
                 // Clear screen
+#ifdef USE_ANIMATER
                 if (!drawn_logo)
                 {
                     drawn_logo = true;
                     anim.reset();
                 }
                 else
+#endif
                   tft.fillRect(0, lcd_top, screen_width, screen_height, TFT_BLACK);
                 Serial.println(F("OK C"));
                 break;
@@ -274,6 +283,7 @@ void loop()
             buf[buf_index++] = c;
         }
     }
-
+#ifdef USE_ANIMATER
     anim.update();
+#endif
 }
