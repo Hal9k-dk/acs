@@ -178,7 +178,8 @@ void loop()
                     const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_large_line))
                     {
-                        Serial.println("Bad line number");
+                        Serial.print("Bad line number: ");
+                        Serial.println(line);
                         break;
                     }
                     const int col = get_2digit_number(buf + 2);
@@ -207,7 +208,8 @@ void loop()
                     const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_small_line))
                     {
-                        Serial.println("Bad line number");
+                        Serial.print("Bad line number: ");
+                        Serial.println(line);
                         break;
                     }
                     const int col = get_2digit_number(buf + 2);
