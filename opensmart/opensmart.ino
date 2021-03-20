@@ -1,19 +1,13 @@
 // LCD library: https://github.com/prenticedavid/MCUFRIEND_kbv
 
-#define LCD_CS A3 // Chip Select goes to Analog 3
-#define LCD_CD A2 // Command/Data goes to Analog 2
-#define LCD_WR A1 // LCD Write goes to Analog 1
-#define LCD_RD A0 // LCD Read goes to Analog 0
-#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
-
 #include <SPI.h>          // f.k. for Arduino-1.5.2
 #include "Adafruit_GFX.h"// Hardware-specific library
-#include <OPENSMART_kbv.h>
+#include <MCUFRIEND_kbv.h>
 
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
 
-OPENSMART_kbv tft;
+MCUFRIEND_kbv tft;
 
 #ifndef min
 #define min(a, b) (((a) < (b)) ? (a) : (b))
@@ -21,15 +15,11 @@ OPENSMART_kbv tft;
 
 #include "animater.h"
 
-const char* version = "1.0.0";
+const char* version = "1.1.0";
 
 const int SW_PIN = A5;
 
-const int RELAY_PIN = 12;
-
 const int TFT_BRIGHTNESS = 200;
-
-const int LOCK_OPEN_TIME_MS = 5000;
 
 const int screen_height = 240;
 const int screen_width = 400;
@@ -44,8 +34,6 @@ Animater anim(tft);
 
 void setup()
 {
-  pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, 0);
   pinMode(SW_PIN, INPUT);
 
   Serial.begin(115200);
@@ -104,16 +92,6 @@ void erase_large(int line)
                  TFT_BLACK);
 }
 
-enum LockState
-{
-    LOCK_OPEN,
-    LOCK_CLOSED,
-    LOCK_TIMED
-};
-
-LockState lock_state = LOCK_CLOSED;
-unsigned long lock_open_tick = 0;
-
 int get_2digit_number(const char* buf)
 {
     return 10*(buf[1] - '0')+buf[2] - '0';
@@ -121,24 +99,6 @@ int get_2digit_number(const char* buf)
 
 void loop()
 {
-    switch (lock_state)
-    {
-    case LOCK_OPEN:
-    case LOCK_TIMED:
-        digitalWrite(RELAY_PIN, 1);
-        break;
-    case LOCK_CLOSED:
-        digitalWrite(RELAY_PIN, 0);
-        break;
-    }
-
-    if (lock_state == LOCK_TIMED)
-    {
-        const auto elapsed = millis() - lock_open_tick;
-        if (elapsed > LOCK_OPEN_TIME_MS)
-            lock_open_tick = LOCK_CLOSED;
-    }
-
     const auto sw = analogRead(SW_PIN);
     
     // R1/R4: 512
@@ -170,26 +130,6 @@ void loop()
                 Serial.println(version);
                 break;
 
-            case 'L':
-                // Control lock
-                // L<on>
-                switch (buf[1])
-                {
-                case '0':
-                    lock_state = LOCK_CLOSED;
-                    break;
-                case '1':
-                    lock_state = LOCK_OPEN;
-                    break;
-                case 'T':
-                    lock_state = LOCK_TIMED;
-                    lock_open_tick = millis();
-                    break;
-                default:
-                    break;
-                }
-                Serial.println("OK L");
-                break;
             case 'C':
                 // Clear screen
                 if (!drawn_logo)

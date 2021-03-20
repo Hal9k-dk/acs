@@ -1,6 +1,6 @@
 #pragma once
 
-#include <OPENSMART_kbv.h>
+#include <MCUFRIEND_kbv.h>
 
 #include "logo.h"
 
@@ -13,7 +13,7 @@ const int logo_width = 220;
 class Animater
 {
 public:
-    Animater(OPENSMART_kbv& _tft)
+    Animater(MCUFRIEND_kbv& _tft)
         : tft(_tft)
     {
     }
@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    OPENSMART_kbv& tft;
+    MCUFRIEND_kbv& tft;
     int count = 0;
     unsigned long last_tick = 0;
 };
