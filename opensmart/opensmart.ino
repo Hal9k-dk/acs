@@ -5,7 +5,10 @@
 #include <MCUFRIEND_kbv.h>
 
 #include <Fonts/FreeSans9pt7b.h>
-#include <Fonts/FreeSans12pt7b.h>
+#include <Fonts/FreeSansBold18pt7b.h>
+
+#define SMALL_FONT  FreeSans9pt7b
+#define LARGE_FONT  FreeSansBold18pt7b
 
 MCUFRIEND_kbv tft;
 
@@ -25,7 +28,7 @@ const int screen_height = 240;
 const int screen_width = 400;
    
 const int lcd_top = 38;
-const int lcd_line_height_large = 23;
+const int lcd_line_height_large = 30;
 const int lcd_line_height_small = 16;
 const int lcd_last_large_line = (screen_height - lcd_top)/lcd_line_height_large - 1;
 const int lcd_last_small_line = (screen_height - lcd_top)/lcd_line_height_small - 1;
@@ -43,7 +46,7 @@ void setup()
 
   tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
-  tft.setFont(&FreeSans12pt7b);
+  tft.setFont(&LARGE_FONT);
   tft.setCursor(0, 0);
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(1);
@@ -126,7 +129,7 @@ void loop()
             {
             case 'V':
                 // Version
-                Serial.print("ACS UI v ");
+                Serial.print(F("ACS UI v "));
                 Serial.println(version);
                 break;
 
@@ -139,36 +142,36 @@ void loop()
                 }
                 else
                   tft.fillRect(0, lcd_top, screen_width, screen_height, TFT_BLACK);
-                Serial.println("OK C");
+                Serial.println(F("OK C"));
                 break;
             case 'E':
                 {
                     // Erase large line
                     // E<line>
-                    const int line = 10*(buf[1] - '0')+buf[2] - '0';
+                    const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_large_line))
                     {
-                        Serial.print("Bad line number: ");
-                        Serial.println(line);
+                        Serial.print(F("Bad line number: "));
+                        Serial.println(buf);
                         break;
                     }
                     erase_large(line);
-                    Serial.println("OK E");
+                    Serial.println(F("OK E"));
                 }
                 break;
             case 'e':
                 {
                     // Erase small line
                     // e<line>
-                    const int line = 10*(buf[1] - '0')+buf[2] - '0';
+                    const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_small_line))
                     {
-                        Serial.print("Bad line number: ");
-                        Serial.println(line);
+                        Serial.print(F("Bad line number: "));
+                        Serial.println(buf);
                         break;
                     }
                     erase_small(line);
-                    Serial.println("OK e");
+                    Serial.println(F("OK e"));
                 }
                 break;
             case 'T':
@@ -178,17 +181,18 @@ void loop()
                     const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_large_line))
                     {
-                        Serial.print("Bad line number: ");
-                        Serial.println(line);
+                        Serial.print(F("Bad line number: "));
+                        Serial.println(buf);
                         break;
                     }
                     const int col = get_2digit_number(buf + 2);
                     if ((col < 0) || (col > static_cast<int>(sizeof(colours)/sizeof(colours[0]))))
                     {
-                        Serial.println("Bad colour");
+                        Serial.print(F("Bad colour: "));
+                        Serial.println(buf);
                         break;
                     }
-                    tft.setFont(&FreeSans12pt7b);
+                    tft.setFont(&LARGE_FONT);
                     if (buf[5] != '0')
                         erase_large(line);
                     String s(buf+6);
@@ -198,7 +202,7 @@ void loop()
                     tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_large);
                     tft.setTextColor(colours[col]);
                     tft.print(s);
-                    Serial.println("OK T");
+                    Serial.println(F("OK T"));
                 }
                 break;
             case 't':
@@ -208,17 +212,18 @@ void loop()
                     const int line = get_2digit_number(buf);
                     if ((line < 0) || (line > lcd_last_small_line))
                     {
-                        Serial.print("Bad line number: ");
-                        Serial.println(line);
+                        Serial.print(F("Bad line number: "));
+                        Serial.println(buf);
                         break;
                     }
                     const int col = get_2digit_number(buf + 2);
                     if ((col < 0) || (col > static_cast<int>(sizeof(colours)/sizeof(colours[0]))))
                     {
-                        Serial.println("Bad colour");
+                        Serial.print(F("Bad colour: "));
+                        Serial.println(buf);
                         break;
                     }
-                    tft.setFont(&FreeSans9pt7b);
+                    tft.setFont(&SMALL_FONT);
                     if (buf[5] != '0')
                         erase_small(line);
                     String s(buf+6);
@@ -228,7 +233,7 @@ void loop()
                     tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_small);
                     tft.setTextColor(colours[col]);
                     tft.print(s);
-                    Serial.println("OK t");
+                    Serial.println(F("OK t"));
                 }
                 break;
             case 'c':
@@ -236,24 +241,24 @@ void loop()
                 tft.fillRect(screen_width/2 - 50, screen_height - 2*lcd_line_height_small + 2,
                              100, lcd_line_height_small,
                              TFT_BLACK);
-                tft.setFont(&FreeSans9pt7b);
+                tft.setFont(&SMALL_FONT);
                 tft.setCursor(screen_width/2 - 20, screen_height - lcd_line_height_small);
                 tft.setTextColor(TFT_GREEN);
                 tft.print(buf + 1);
-                Serial.println("OK c");
+                Serial.println(F("OK c"));
                 break;
 
             case 'S':
-                Serial.print("S");
-                for (int i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
+                Serial.print(F("S"));
+                for (size_t i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
                     Serial.print(key_pressed[i]);
                 Serial.println();
-                for (int i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
+                for (size_t i = 0; i < sizeof(key_pressed)/sizeof(key_pressed[0]); ++i)
                     key_pressed[i] = false;
                 break;
                 
             default:
-                Serial.print("Unknown command: ");
+                Serial.print(F("Unknown command: "));
                 Serial.println(buf);
                 break;
             }
@@ -262,7 +267,7 @@ void loop()
         {
             if (buf_index >= BUF_SIZE)
             {
-                Serial.println("Error: Line too long");
+                Serial.println(F("Error: Line too long"));
                 buf_index = 0;
                 return;
             }

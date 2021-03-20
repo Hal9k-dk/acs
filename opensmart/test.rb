@@ -20,7 +20,7 @@ while true
   puts sp.gets
   line = line + 1
   n = n + 1
-  if line >= 8
+  if line >= 6
     line = 0
   end
   color = color + 1
