@@ -1,6 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:interface-cache
-EELAYER 29 0
+EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -198,10 +197,6 @@ Wire Wire Line
 	4100 3000 4050 3000
 Wire Wire Line
 	4050 3000 4050 2850
-Wire Wire Line
-	4050 2850 7050 2850
-Wire Wire Line
-	7050 2850 7050 4000
 $Comp
 L w_relay:RELAY_DIL16 RLY1
 U 1 1 5CE10714
@@ -218,9 +213,6 @@ Wire Wire Line
 Wire Wire Line
 	7600 4600 7600 4750
 Wire Wire Line
-	7050 2200 7050 2850
-Connection ~ 7050 2850
-Wire Wire Line
 	7900 4600 7900 4800
 Wire Wire Line
 	7900 4800 8800 4800
@@ -229,7 +221,7 @@ Wire Wire Line
 Wire Wire Line
 	7850 4050 8800 4050
 $Comp
-L Mechanical:MountingHole H1
+L interface-rescue:MountingHole-Mechanical H1
 U 1 1 5CE975F5
 P 1650 5300
 F 0 "H1" H 1750 5346 50  0000 L CNN
@@ -240,7 +232,7 @@ F 3 "~" H 1650 5300 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Mechanical:MountingHole H2
+L interface-rescue:MountingHole-Mechanical H2
 U 1 1 5CE979F8
 P 1650 5700
 F 0 "H2" H 1750 5746 50  0000 L CNN
@@ -251,7 +243,7 @@ F 3 "~" H 1650 5700 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Mechanical:MountingHole H3
+L interface-rescue:MountingHole-Mechanical H3
 U 1 1 5CE97D65
 P 1650 6050
 F 0 "H3" H 1750 6096 50  0000 L CNN
@@ -262,7 +254,7 @@ F 3 "~" H 1650 6050 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Mechanical:MountingHole H4
+L interface-rescue:MountingHole-Mechanical H4
 U 1 1 5CE9804D
 P 1650 6400
 F 0 "H4" H 1750 6446 50  0000 L CNN
@@ -324,4 +316,24 @@ F 3 "~" H 2950 2900 50  0001 C CNN
 	1    2950 2900
 	1    0    0    -1  
 $EndComp
+Wire Wire Line
+	7050 2200 7050 2850
+$Comp
+L Device:R R?
+U 1 1 60566F03
+P 5075 2850
+F 0 "R?" V 4868 2850 50  0000 C CNN
+F 1 "20" V 4959 2850 50  0000 C CNN
+F 2 "" V 5005 2850 50  0001 C CNN
+F 3 "~" H 5075 2850 50  0001 C CNN
+	1    5075 2850
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	4925 2850 4050 2850
+Wire Wire Line
+	5225 2850 7050 2850
+Connection ~ 7050 2850
+Wire Wire Line
+	7050 2850 7050 4000
 $EndSCHEMATC
