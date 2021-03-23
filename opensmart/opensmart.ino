@@ -20,7 +20,7 @@ MCUFRIEND_kbv tft;
 #  include "animater.h"
 #endif
 
-const char* version = "1.1.0";
+const char* version = "1.1.1";
 
 const int SW_PIN = A5;
 
@@ -98,7 +98,7 @@ void erase_small(int line)
 
 void erase_large(int line)
 {
-    tft.fillRect(0, lcd_top+line*lcd_line_height_large+1+5,
+    tft.fillRect(0, lcd_top+line*lcd_line_height_large+1,
                  screen_width, lcd_line_height_large,
                  TFT_BLACK);
 }
