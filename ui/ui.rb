@@ -242,6 +242,7 @@ class Ui
     @temp_status_2 = ''
     @temp_status_colour = ''
     @temp_status_at = nil
+    @temp_status_set = false
     @who = nil
     # When to automatically lock again
     @lock_time = nil
@@ -256,14 +257,24 @@ class Ui
     @lock.flush_input
   end
 
+  def set_status(text, colour)
+    for i in 0..4
+      if i != 3
+        write(true, true, i, '', 'blue')
+      end
+    end
+    write(true, true, 3, text, colour)
+  end
+  
   def phase2init()
+    clear()
+    set_status('Locking', 'orange')
     resp = lock_send_and_wait("set_verbosity 0")
     resp = lock_send_and_wait("lock")
     if !resp[0]
       if resp[1].include? "not calibrated"
         @reader.send(SOUND_UNCALIBRATED)
-        clear()
-        write(true, false, 2, 'CALIBRATING', 'red')
+        set_status('CALIBRATING', 'red')
         puts "Calibrating lock"
         resp = lock_send_and_wait("calibrate")
         if !resp[0]
@@ -306,8 +317,9 @@ class Ui
   end
 
   def write(large, erase, line, text, col = 'white')
+    col_idx = @color_map.find_index(col)
     s = sprintf("#{large ? 'T' :'t'}%02d%02d%s%s",
-                line, @color_map.find_index(col), erase ? '1' : '0', text)
+                line, col_idx, erase ? '1' : '0', text)
     send_and_wait(s)
   end
 
@@ -327,6 +339,7 @@ class Ui
     @temp_status_2 = s2
     @temp_status_colour = colour
     @temp_status_at = Time.now
+    @temp_status_set = true
   end
   
   def wait_response(s)
@@ -505,14 +518,14 @@ class Ui
       end
       @manual_mode_at = nil
       what = ''
+      do_clear = false
       case @desired_lock_state
       when :unlocked
         callback = nil
         if @actual_lock_state == :locked
           callback = @after_lock_fn
           @after_lock_fn = nil
-          clear()
-          write(true, false, 2, 'Unlocking', 'blue')
+          set_status('Unlocking', 'blue')
         end
         resp = lock_send_and_wait("unlock")
         if callback
@@ -521,15 +534,17 @@ class Ui
         what = 'LOCK'
       when :locked
         if @actual_lock_state == :unlocked
-          clear()
-          write(true, false, 3, 'Locking', 'orange')
-        else
-          write(true, false, 3, 'Locked', 'red')
+          set_status('Locking', 'orange')
+          do_clear = true
         end
         resp = lock_send_and_wait("lock")
         what = 'UNLOCK'
       end
-      if !resp[0]
+      if resp[0]
+        if do_clear
+          set_status('', 'blue')
+        end
+      else
         clear()
         puts("ERROR: Cannot #{what}: '#{resp[1]}'")
         write(true, false, 0, 'ERROR:', 'red')
@@ -588,9 +603,7 @@ class Ui
           @in_thursday_mode = true
           @reader.add_log(nil, 'Enter Thursday mode')
         else
-          @temp_status_1 = 'It is not'
-          @temp_status_2 = 'Thursday yet'
-          @temp_status_at = Time.now
+          set_temp_status('It is not', 'Thursday yet')
         end
       end
     else
@@ -616,9 +629,7 @@ class Ui
               @desired_lock_state = :unlocked
               @reader.add_log(nil, 'Door unlocked')
             else
-              @temp_status_1 = 'It is not'
-              @temp_status_2 = 'Thursday yet'
-              @temp_status_at = Time.now
+              set_temp_status('It is not', 'Thursday yet')
             end
           elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
             @desired_lock_state = :unlocked
@@ -694,6 +705,10 @@ class Ui
         s2 = @temp_status_2
 	if @temp_status_colour && @temp_status_colour != ''
           col = @temp_status_colour
+        end
+        if @temp_status_set
+          clear()
+          @temp_status_set = false
         end
       end
     end
