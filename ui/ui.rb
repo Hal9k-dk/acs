@@ -2,7 +2,9 @@
 
 # TODO:
 # - reset ports
-# - start when fully locked -> manual
+# - [DONE] start when fully locked -> manual
+# - Red when locked -> unlock and lock
+# - ERROR: Expected 'Sxx', got '"Bad line number: 675"'
 
 require 'optparse'
 require 'pg'
@@ -35,12 +37,20 @@ UNLOCK_KEY_TIME = 0.1
 # How many seconds green key must be held down to activate Thursday mode
 THURSDAY_KEY_TIME = 2
 
+# How long to keep the door open after valid card is presented
+ENTER_TIME_SECS = 20
+
 TEMP_STATUS_SHOWN_FOR = 5
 
 UNLOCK_PERIOD_S = 15*60
 UNLOCK_WARN_S = 5*60
 
 MANUAL_WARN_SECS = 5*60
+
+# Max line length for small font
+MAX_LINE_LEN_S = 40
+
+SLACK_IMPORTANT = 'Hey @torsten, '
 
 $q = Queue.new
 $api_key = File.read('apikey.txt').strip()
@@ -130,7 +140,7 @@ def find_ports()
 end
 
 def is_it_thursday?
-  return (Date.today.strftime("%A") == 'Thursday') && ($tz.utc_to_local(Time.now).hour >= 15);
+  return (Date.today.strftime("%A") == 'Thursday') && ($tz.utc_to_local(Time.now).hour >= 15)
 end
 
 def get_led_inten_cmd
@@ -148,7 +158,6 @@ class Ui
   # Display lines for lock status
   STATUS_1 = 2
   STATUS_2 = 4
-  ENTER_TIME_SECS = 30 # How long to keep the door open after valid card is presented
 
   def initialize(port, lock)
     if !$opensmart
@@ -233,6 +242,7 @@ class Ui
     @temp_status_2 = ''
     @temp_status_colour = ''
     @temp_status_at = nil
+    @temp_status_set = false
     @who = nil
     # When to automatically lock again
     @lock_time = nil
@@ -247,19 +257,30 @@ class Ui
     @lock.flush_input
   end
 
+  def set_status(text, colour)
+    for i in 0..4
+      if i != 3
+        write(true, true, i, '', 'blue')
+      end
+    end
+    write(true, true, 3, text, colour)
+  end
+  
   def phase2init()
+    clear()
+    set_status('Locking', 'orange')
+    resp = lock_send_and_wait("set_verbosity 0")
     resp = lock_send_and_wait("lock")
     if !resp[0]
       if resp[1].include? "not calibrated"
         @reader.send(SOUND_UNCALIBRATED)
-        clear();
-        write(true, false, 2, 'CALIBRATING LOCK', 'red')
+        set_status('CALIBRATING', 'red')
         puts "Calibrating lock"
         resp = lock_send_and_wait("calibrate")
         if !resp[0]
           lock_is_faulty(resp[1])
         end
-        clear();
+        clear()
       end
     end
     @actual_lock_state = @desired_lock_state = :locked
@@ -270,10 +291,10 @@ class Ui
   end
 
   def lock_is_faulty(reply)
-    clear();
+    clear()
     write(true, false, 0, 'FATAL ERROR:', 'red')
-    write(true, false, 1, 'LOCK REPLY:', 'red')
-    write(true, false, 3, reply, 'red')
+    write(true, false, 2, 'LOCK REPLY:', 'red')
+    write(false, false, 5, reply.strip(), 'red')
     puts("Fatal error: lock said #{reply}")
     while true
       @reader.send(SOUND_LOCK_FAULTY1)
@@ -296,8 +317,9 @@ class Ui
   end
 
   def write(large, erase, line, text, col = 'white')
+    col_idx = @color_map.find_index(col)
     s = sprintf("#{large ? 'T' :'t'}%02d%02d%s%s",
-                line, @color_map.find_index(col), erase ? '1' : '0', text)
+                line, col_idx, erase ? '1' : '0', text)
     send_and_wait(s)
   end
 
@@ -317,6 +339,7 @@ class Ui
     @temp_status_2 = s2
     @temp_status_colour = colour
     @temp_status_at = Time.now
+    @temp_status_set = true
   end
   
   def wait_response(s)
@@ -377,7 +400,7 @@ class Ui
   end
 
   def lock_send_and_wait(s)
-    #puts("Lock: Sending #{s}")
+    puts("Lock: Sending #{s}")
     @lock.flush_input()
     @lock.puts(s)
     return lock_wait_response(s)
@@ -495,14 +518,14 @@ class Ui
       end
       @manual_mode_at = nil
       what = ''
+      do_clear = false
       case @desired_lock_state
       when :unlocked
         callback = nil
         if @actual_lock_state == :locked
           callback = @after_lock_fn
           @after_lock_fn = nil
-          clear();
-          write(true, false, 2, 'Unlocking', 'blue')
+          set_status('Unlocking', 'blue')
         end
         resp = lock_send_and_wait("unlock")
         if callback
@@ -511,21 +534,32 @@ class Ui
         what = 'LOCK'
       when :locked
         if @actual_lock_state == :unlocked
-          clear();
-          write(true, false, 2, 'Locking', 'orange')
+          set_status('Locking', 'orange')
+          do_clear = true
         end
         resp = lock_send_and_wait("lock")
         what = 'UNLOCK'
       end
-      if !resp[0]
-        clear();
+      if resp[0]
+        if do_clear
+          set_status('', 'blue')
+        end
+      else
+        clear()
+        puts("ERROR: Cannot #{what}: '#{resp[1]}'")
         write(true, false, 0, 'ERROR:', 'red')
-        write(true, false, 1, "CANNOT #{what}", 'red')
-        write(true, false, 3, resp[1], 'red')
+        write(true, false, 2, "CANNOT #{what}", 'red')
+        cleaned = resp[1].strip()
+        line1 = cleaned[0..MAX_LINE_LEN_S-1]
+        write(false, false, 7, line1, 'red')
+        if cleaned.size > MAX_LINE_LEN_S
+          write(false, false, 8, cleaned[MAX_LINE_LEN_S..-1], 'red')
+        end
         for i in 0..15
           @reader.send(SOUND_CANNOT_LOCK)
           sleep(0.3)
         end
+        @slack.set_status("#{SLACK_IMPORTANT} I could not #{what.downcase} the door")
       end
     end
   end
@@ -569,9 +603,7 @@ class Ui
           @in_thursday_mode = true
           @reader.add_log(nil, 'Enter Thursday mode')
         else
-          @temp_status_1 = 'It is not'
-          @temp_status_2 = 'Thursday yet'
-          @temp_status_at = Time.now
+          set_temp_status('It is not', 'Thursday yet')
         end
       end
     else
@@ -597,9 +629,7 @@ class Ui
               @desired_lock_state = :unlocked
               @reader.add_log(nil, 'Door unlocked')
             else
-              @temp_status_1 = 'It is not'
-              @temp_status_2 = 'Thursday yet'
-              @temp_status_at = Time.now
+              set_temp_status('It is not', 'Thursday yet')
             end
           elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
             @desired_lock_state = :unlocked
@@ -657,9 +687,9 @@ class Ui
         @reader.advertise_open()
       end
     else
-      clear();
-      write(true, false, 2, 'FATAL ERROR:', 'red')
-      write(true, false, 4, 'UNKNOWN LOCK STATE', 'red')
+      clear()
+      write(true, false, 0, 'FATAL ERROR:', 'red')
+      write(false, false, 4, 'UNKNOWN LOCK STATE', 'red')
       puts("Fatal error: Unknown desired lock state '#{@desired_lock_state}'")
       Process.exit
     end
@@ -669,11 +699,16 @@ class Ui
       if shown_for > TEMP_STATUS_SHOWN_FOR
         @temp_status_1 = ''
         puts("Clear temp status")
+        clear()
       else
         s1 = @temp_status_1
         s2 = @temp_status_2
 	if @temp_status_colour && @temp_status_colour != ''
           col = @temp_status_colour
+        end
+        if @temp_status_set
+          clear()
+          @temp_status_set = false
         end
       end
     end
@@ -689,9 +724,9 @@ class Ui
     check_buttons()
     
     # Time display
-    ct = DateTime.now.to_time.strftime("%H:%M")
+    ct = $tz.utc_to_local(Time.now).strftime("%H:%M")
     if ct != @last_time
-      write(false, true, $opensmart ? 10 : 12, ct, 'blue')
+      write(false, true, 12, ct, 'blue')
       @last_time = ct
       @reader.send(get_led_inten_cmd())
     end
@@ -870,7 +905,7 @@ class Slack
   
   def send_message(msg)
     puts "SLACK: #{msg}"
-    #return
+    return
     uri = URI.parse("https://slack.com/api/chat.postMessage")
     request = Net::HTTP::Post.new(uri)
     request.content_type = "application/json"
@@ -893,11 +928,11 @@ if !ports['ui']
 end
 
 ui = Ui.new(ports['ui'], ports['lock'])
-ui.clear();
+ui.clear()
 
 if !ports['reader']
-  ui.write(true, false, 2, 'FATAL ERROR:', 'red')
-  ui.write(true, false, 4, 'NO READER FOUND', 'red')
+  ui.write(true, false, 0, 'FATAL ERROR:', 'red')
+  ui.write(false, false, 4, 'NO READER FOUND', 'red')
   puts("Fatal error: No card reader found")
   Process.exit
 end
@@ -912,7 +947,7 @@ slack = Slack.new()
 ui.set_slack(slack)
 
 puts("----\nReady")
-ui.clear();
+ui.clear()
 
 USE_WDOG = false #true
 
