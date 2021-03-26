@@ -20,7 +20,7 @@ MCUFRIEND_kbv tft;
 #  include "animater.h"
 #endif
 
-const char* version = "1.1.1";
+const char* version = "1.1.2";
 
 const int SW_PIN = A5;
 
@@ -34,8 +34,9 @@ const int lcd_top = 38;
 #else
 const int lcd_top = 0;
 #endif
-const int lcd_line_height_large = 30;
-const int lcd_line_height_small = 16;
+const int lcd_line_height_large = 40;
+const int lcd_baseline_offset_large = 8;
+const int lcd_line_height_small = 18;
 const int lcd_last_large_line = (screen_height - lcd_top)/lcd_line_height_large - 1;
 const int lcd_last_small_line = (screen_height - lcd_top)/lcd_line_height_small - 1;
 
@@ -208,7 +209,7 @@ void loop()
                     int16_t dummy1;
                     uint16_t dummy2, w;
                     tft.getTextBounds(s, 0, 0, &dummy1, &dummy1, &w, &dummy2);
-                    tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_large);
+                    tft.setCursor((screen_width - w)/2, lcd_top+(line+1)*lcd_line_height_large-lcd_baseline_offset_large);
                     tft.setTextColor(colours[col]);
                     tft.print(s);
                     Serial.println(F("OK T"));
