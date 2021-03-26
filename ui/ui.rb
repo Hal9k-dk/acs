@@ -50,6 +50,9 @@ MANUAL_WARN_SECS = 5*60
 # Max line length for small font
 MAX_LINE_LEN_S = 40
 
+# Max lines of large font text
+NOF_TEXT_LINES = 5
+
 SLACK_IMPORTANT = 'Hey @torsten, '
 
 $q = Queue.new
@@ -234,16 +237,15 @@ class Ui
     @last_time = ''
     @green_pressed_at = nil
     @unlocked_at = nil
-    @last_status_1 = nil
-    @last_status_2 = nil
     @reader = nil
     @slack = nil
-    @temp_status_1 = ''
-    @temp_status_2 = ''
-    @temp_status_colour = ''
+    @who = nil
+    @text_lines = Array.new(NOF_TEXT_LINES)
+    @text_colour = ''
+    @temp_lines = Array.new(NOF_TEXT_LINES)
+    @temp_colour = ''
     @temp_status_at = nil
     @temp_status_set = false
-    @who = nil
     # When to automatically lock again
     @lock_time = nil
     # Whether to show remaining time on display
@@ -258,12 +260,56 @@ class Ui
   end
 
   def set_status(text, colour)
-    for i in 0..4
-      if i != 3
-        write(true, true, i, '', 'blue')
-      end
+    puts("set_status: #{text}")
+    old_lines = @text_lines
+    @text_lines = do_set_status(text)
+    @text_colour = colour
+    if @text_lines != old_lines
+      write_status()
     end
-    write(true, true, 3, text, colour)
+  end
+
+  def write_status()
+    line_no = 0
+    @text_lines.each do |line|
+      write(true, true, line_no, line, @text_colour)
+      line_no = line_no + 1
+    end
+  end
+
+  def set_temp_status(text, colour = 'white')
+    @temp_lines = do_set_status(text)
+    @temp_status_colour = colour
+    @temp_status_at = Time.now
+    @temp_status_set = true
+    line_no = 0
+    @temp_lines.each do |line|
+      write(true, true, line_no, line, colour)
+      line_no = line_no + 1
+    end
+  end
+
+  def do_set_status(text)
+    texts = Array(text)
+    text_lines = Array.new(NOF_TEXT_LINES)
+    case texts.size
+    when 0
+      return text_lines
+    when 1
+      text_lines[NOF_TEXT_LINES/2] = texts[0]
+    when 2
+      text_lines = Array.new(NOF_TEXT_LINES)
+      text_lines[NOF_TEXT_LINES/2 - 1] = texts[0]
+      text_lines[NOF_TEXT_LINES/2 + 1] = texts[1]
+    when 3
+      text_lines = Array.new(NOF_TEXT_LINES)
+      text_lines[NOF_TEXT_LINES/2 - 1] = texts[0]
+      text_lines[NOF_TEXT_LINES/2] = texts[1]
+      text_lines[NOF_TEXT_LINES/2 + 1] = texts[2]
+    else
+      puts("ERROR: #{texts.size} lines not handled")
+    end
+    return text_lines
   end
   
   def phase2init()
@@ -331,17 +377,10 @@ class Ui
     @desired_lock_state = :unlocked
     @lock_time = Time.now + ENTER_TIME_SECS
     @advertise_remaining_time = false
-    @after_lock_fn = lambda { set_temp_status('Enter', @who, 'blue') }
+    # Bug: 'Enter' is only shown briefly
+    @after_lock_fn = lambda { set_temp_status(['Enter', @who], 'blue') }
   end
 
-  def set_temp_status(s1, s2 = '', colour = '')
-    @temp_status_1 = s1
-    @temp_status_2 = s2
-    @temp_status_colour = colour
-    @temp_status_at = Time.now
-    @temp_status_set = true
-  end
-  
   def wait_response(s)
     reply = ''
     while true
@@ -489,6 +528,7 @@ class Ui
 
   def synchronize_lock_state()
     if @override_manual
+      puts 'Exit manual lock mode'
       @actual_lock_state = :unknown
       @override_manual = false
     end
@@ -531,14 +571,14 @@ class Ui
         if callback
           callback.call
         end
-        what = 'LOCK'
+        what = 'UNLOCK'
       when :locked
         if @actual_lock_state == :unlocked
           set_status('Locking', 'orange')
           do_clear = true
         end
         resp = lock_send_and_wait("lock")
-        what = 'UNLOCK'
+        what = 'LOCK'
       end
       if resp[0]
         if do_clear
@@ -564,9 +604,12 @@ class Ui
     end
   end
 
+  # Exit manual lock state
   def return_to_auto()
-    @manual_lock_state = nil
-    @override_manual = true
+    if @manual_lock_state
+      @manual_lock_state = nil
+      @override_manual = true
+    end
   end
   
   def check_buttons()
@@ -603,7 +646,7 @@ class Ui
           @in_thursday_mode = true
           @reader.add_log(nil, 'Enter Thursday mode')
         else
-          set_temp_status('It is not', 'Thursday yet')
+          set_temp_status(['It is not', 'Thursday yet'])
         end
       end
     else
@@ -629,7 +672,7 @@ class Ui
               @desired_lock_state = :unlocked
               @reader.add_log(nil, 'Door unlocked')
             else
-              set_temp_status('It is not', 'Thursday yet')
+              set_temp_status(['It is not', 'Thursday yet'])
             end
           elsif green_pressed_for >= UNLOCK_KEY_TIME && !@unlocked_at
             @desired_lock_state = :unlocked
@@ -657,24 +700,19 @@ class Ui
     # Try to make actual lock state match desired lock state
     synchronize_lock_state()
 
-    col = ''
-    s1 = ''
-    s2 = ''
     case @desired_lock_state
     when :locked
-      col = 'orange'
-      s1 = 'Locked'
+      set_status('Locked', 'orange')
     when :unlocked
       col = 'green'
       if @advertise_remaining_time
-        s1 = 'Open for'
         secs_left = (@lock_time - Time.now).to_i
         mins_left = (secs_left/60.0).ceil
-        #puts "Left: #{mins_left}m #{secs_left}s"
+        left_text = ''
         if mins_left > 1
-          s2 = "#{mins_left} minutes"
+          left_text = "#{mins_left} minutes"
         else
-          s2 = "#{secs_left} seconds"
+          left_text = "#{secs_left} seconds"
         end
         if secs_left <= UNLOCK_WARN_S
           col = 'orange'
@@ -682,8 +720,9 @@ class Ui
         else
           @reader.advertise_open()
         end
+        set_status(['Open for', left_text], col)
       else
-        s1 = 'Open'
+        set_status('Open', 'green')
         @reader.advertise_open()
       end
     else
@@ -694,31 +733,14 @@ class Ui
       Process.exit
     end
 
-    if !@temp_status_1.empty?
+    if @temp_status_set
       shown_for = Time.now - @temp_status_at
       if shown_for > TEMP_STATUS_SHOWN_FOR
-        @temp_status_1 = ''
+        @temp_status_set = false
         puts("Clear temp status")
         clear()
-      else
-        s1 = @temp_status_1
-        s2 = @temp_status_2
-	if @temp_status_colour && @temp_status_colour != ''
-          col = @temp_status_colour
-        end
-        if @temp_status_set
-          clear()
-          @temp_status_set = false
-        end
+        write_status()
       end
-    end
-    if s1 != @last_status_1
-      write(true, true, STATUS_1, s1, col)
-      @last_status_1 = s1
-    end
-    if s2 != @last_status_2
-      write(true, true, STATUS_2, s2, col)
-      @last_status_2 = s2
     end
 
     check_buttons()
@@ -726,7 +748,7 @@ class Ui
     # Time display
     ct = $tz.utc_to_local(Time.now).strftime("%H:%M")
     if ct != @last_time
-      write(false, true, 12, ct, 'blue')
+      send_and_wait("c#{ct}\n")
       @last_time = ct
       @reader.send(get_led_inten_cmd())
     end
@@ -870,11 +892,11 @@ class CardReader
           send(LED_NO_ENTRY)
           if user_id
             add_log(user_id, 'Denied entry')
-            @ui.set_temp_status('Denied entry:', who, 'red')
+            @ui.set_temp_status(['Denied entry:', who], 'red')
           else
             add_log(user_id, "Denied entry for #{@last_card}")
             add_unknown_card(@last_card)
-            @ui.set_temp_status('Unknown card', @last_card, 'yellow')
+            @ui.set_temp_status(['Unknown card', @last_card], 'yellow')
           end
         else
           puts("Impossible! allowed is neither true nor false: #{allowed}")
