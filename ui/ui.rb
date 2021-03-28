@@ -5,6 +5,8 @@
 # - [DONE] start when fully locked -> manual
 # - Red when locked -> unlock and lock
 # - ERROR: Expected 'Sxx', got '"Bad line number: 675"'
+# - 'Enter' is only shown briefly, then replaced by 'Open'
+# - Reader does not show Closing pattern when 1 minute remains
 
 require 'optparse'
 require 'pg'
@@ -513,6 +515,7 @@ class Ui
        @lock_time &&
        Time.now >= @lock_time
       puts "Time elapsed, locking again"
+      return_to_auto()
       @desired_lock_state = :locked
     end
 
@@ -520,6 +523,7 @@ class Ui
     if @desired_lock_state == :unlocked
       if @in_thursday_mode && !is_it_thursday?
         puts "Locking, no longer Thursday"
+        return_to_auto()
         @in_thursday_mode = false
         @desired_lock_state = :locked
       end
@@ -927,7 +931,6 @@ class Slack
   
   def send_message(msg)
     puts "SLACK: #{msg}"
-    return
     uri = URI.parse("https://slack.com/api/chat.postMessage")
     request = Net::HTTP::Post.new(uri)
     request.content_type = "application/json"
