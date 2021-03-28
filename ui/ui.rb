@@ -5,8 +5,6 @@
 # - [DONE] start when fully locked -> manual
 # - Red when locked -> unlock and lock
 # - ERROR: Expected 'Sxx', got '"Bad line number: 675"'
-# - 'Enter' is only shown briefly, then replaced by 'Open'
-# - Reader does not show Closing pattern when 1 minute remains
 
 require 'optparse'
 require 'pg'
@@ -22,9 +20,11 @@ LED_ENTER = 'P250R8SGN'
 LED_NO_ENTRY = 'P100R30SRN'
 LED_WAIT = 'P10R0SGNN'
 LED_ERROR = 'P5R10SGX10NX100RX100N'
+# Slow brief green blink
+LED_READY = 'P200R10SG'
 # Constant green
-LED_OPEN = 'P200R10SG'
-LED_CLOSING = 'P5R5SGX10NX100R'
+LED_OPEN = 'P200R0SG'
+LED_CLOSING = 'P5R0SGX10NX100R'
 LED_LOW_INTEN = 'I20'
 LED_MED_INTEN = 'I50'
 LED_HIGH_INTEN = 'I100'
@@ -107,10 +107,10 @@ def find_ports()
         puts "Found #{port}"
         begin
           while true
-            sleep 1
+            sleep 0.1
             puts "Send V"
             sp.puts("V")
-            sleep 1
+            sleep 0.1
             begin
               line = sp.gets
               puts "Got #{line}"
@@ -262,7 +262,7 @@ class Ui
   end
 
   def set_status(text, colour)
-    puts("set_status: #{text}")
+    #puts("set_status: #{text}")
     old_lines = @text_lines
     @text_lines = do_set_status(text)
     @text_colour = colour
@@ -313,7 +313,7 @@ class Ui
     end
     return text_lines
   end
-  
+
   def phase2init()
     clear()
     set_status('Locking', 'orange')
@@ -425,7 +425,7 @@ class Ui
         reply = reply + c
       end
     end
-    puts "Lock reply: #{reply}"
+    #puts "Lock reply: #{reply}"
     if reply[0..1] != "OK"
       puts "ERROR: Expected 'OK', got '#{reply.inspect}' (in response to #{cmd})"
       return [ false, reply ]
@@ -441,7 +441,7 @@ class Ui
   end
 
   def lock_send_and_wait(s)
-    puts("Lock: Sending #{s}")
+    #puts("Lock: Sending #{s}")
     @lock.flush_input()
     @lock.puts(s)
     return lock_wait_response(s)
@@ -482,7 +482,7 @@ class Ui
       return
     end
     status = resp[1].split(' ')[2]
-    puts("Lock status #{status}")
+    #puts("Lock status #{status}")
     case status
     when 'unknown'
       puts("ERROR: Lock status is unknown")
@@ -697,16 +697,13 @@ class Ui
     # Check if it is time to lock again
     check_should_lock()
 
-    if @desired_lock_state == :unlocked
-      @reader.advertise_open()
-    end
-
     # Try to make actual lock state match desired lock state
     synchronize_lock_state()
 
     case @desired_lock_state
     when :locked
       set_status('Locked', 'orange')
+      @reader.advertise_ready()
     when :unlocked
       col = 'green'
       if @advertise_remaining_time
@@ -766,7 +763,7 @@ class CardReader
     @last_card = ''
     @last_card_read_at = Time.now()
     @last_card_seen_at = Time.now()
-    @last_led_write_at = Time.now()
+    @last_led_cmd = nil
   end
 
   def set_ui(ui)
@@ -790,19 +787,15 @@ class CardReader
   end
   
   def warn_closing()
-    if Time.now - @last_led_write_at < 1
-      return
-    end
-    @last_led_write_at = Time.now
-    send(LED_CLOSING)
+    set_led(LED_CLOSING)
   end
   
   def advertise_open()
-    if Time.now - @last_led_write_at < 1
-      return
-    end
-    @last_led_write_at = Time.now
-    send(LED_OPEN)
+    set_led(LED_OPEN)
+  end
+
+  def advertise_ready()
+    set_led(LED_READY)
   end
 
   def check_permission(id)
@@ -854,7 +847,15 @@ class CardReader
     end
     return !error
   end
-  
+
+  def set_led(cmd)
+    if cmd == @last_led_cmd
+      return
+    end
+    @last_led_cmd = cmd
+    @port.puts(cmd)
+  end
+
   def update()
     if Time.now - @last_card_read_at < 1
       return
@@ -883,17 +884,17 @@ class CardReader
       @last_card = line
       @last_card_seen_at = now
       # Let user know we are doing something
-      send(LED_WAIT)
+      set_led(LED_WAIT)
       allowed, error, who, user_id = check_permission(@last_card)
       if error
-        send(LED_ERROR)
+        set_led(LED_ERROR)
       else
         if allowed == true
-          send(LED_ENTER)
+          set_led(LED_ENTER)
           @ui.unlock(who)
           add_log(user_id, 'Granted entry')
         elsif allowed == false
-          send(LED_NO_ENTRY)
+          set_led(LED_NO_ENTRY)
           if user_id
             add_log(user_id, 'Denied entry')
             @ui.set_temp_status(['Denied entry:', who], 'red')
@@ -904,7 +905,7 @@ class CardReader
           end
         else
           puts("Impossible! allowed is neither true nor false: #{allowed}")
-          send(LED_ERROR)
+          set_led(LED_ERROR)
         end
       end
     end
