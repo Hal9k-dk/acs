@@ -42,7 +42,7 @@ THURSDAY_KEY_TIME = 2
 # How long to keep the door open after valid card is presented
 ENTER_TIME_SECS = 20
 
-TEMP_STATUS_SHOWN_FOR = 5
+TEMP_STATUS_SHOWN_FOR = 10
 
 UNLOCK_PERIOD_S = 15*60
 UNLOCK_WARN_S = 5*60
@@ -252,8 +252,8 @@ class Ui
     @lock_time = nil
     # Whether to show remaining time on display
     @advertise_remaining_time = false
-    # One-shot function to call after locking
-    @after_lock_fn = nil
+    # One-shot function to call after unlocking
+    @after_unlock_fn = nil
     @in_thursday_mode = false
     @port = port
     @lock = lock
@@ -266,7 +266,7 @@ class Ui
     old_lines = @text_lines
     @text_lines = do_set_status(text)
     @text_colour = colour
-    if @text_lines != old_lines
+    if !@temp_status_set && @text_lines != old_lines
       write_status()
     end
   end
@@ -381,8 +381,10 @@ class Ui
     @desired_lock_state = :unlocked
     @lock_time = Time.now + ENTER_TIME_SECS
     @advertise_remaining_time = false
-    # Bug: 'Enter' is only shown briefly
-    @after_lock_fn = lambda { set_temp_status(['Enter', @who], 'blue') }
+    @after_unlock_fn = lambda {
+      set_temp_status(['Enter', @who], 'blue')
+      @lock_time = Time.now + ENTER_TIME_SECS
+    }
   end
 
   def wait_response(s)
@@ -471,7 +473,7 @@ class Ui
       Process.exit()
     end
     if $opensmart
-      return reply[1] == '1', reply[2] == '1', reply[3] == '1'
+      return reply[1] == '1', reply[2] == '1', reply[3] == '1', reply[4] == '1'
     else
       return reply[1] == '1', reply[2] == '1'
     end
@@ -569,8 +571,8 @@ class Ui
       when :unlocked
         callback = nil
         if @actual_lock_state == :locked
-          callback = @after_lock_fn
-          @after_lock_fn = nil
+          callback = @after_unlock_fn
+          @after_unlock_fn = nil
           set_status('Unlocking', 'blue')
         end
         resp = lock_send_and_wait("unlock")
@@ -620,7 +622,7 @@ class Ui
   
   def check_buttons()
     if $opensmart
-      green, white, red = read_keys()
+      green, white, red, leave = read_keys()
       if red
         puts "Red pressed at #{Time.now}"
         # Lock
@@ -654,6 +656,15 @@ class Ui
         else
           set_temp_status(['It is not', 'Thursday yet'])
         end
+      elsif leave
+        puts "Leave pressed"
+        @desired_lock_state = :unlocked
+        @lock_time = Time.now + ENTER_TIME_SECS
+        @advertise_remaining_time = false
+        @after_unlock_fn = lambda {
+          set_temp_status(['You', 'may', 'leave'], 'blue')
+          @lock_time = Time.now + ENTER_TIME_SECS
+        }
       end
     else
       # Not OpenSmart
