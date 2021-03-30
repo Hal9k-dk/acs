@@ -542,6 +542,7 @@ class Ui
       @override_manual = false
     end
     if @actual_lock_state == :manual
+      set_status('Manual mode', 'cyan')
       # We are in manual override - check duration
       if !@manual_mode_at
         # Enter manual mode
@@ -559,6 +560,7 @@ class Ui
         if @manual_mode_unlocked
           @slack.set_status("Lock has been manually locked")
           @manual_mode_unlocked = false
+          set_status(['Manual mode', '(locked)'], 'cyan')
         end
       end
     else
@@ -721,7 +723,9 @@ class Ui
 
     case @desired_lock_state
     when :locked
-      set_status('Locked', 'orange')
+      if !@manual_lock_state
+        set_status('Locked', 'orange')
+      end
       @reader.advertise_ready()
     when :unlocked
       col = 'green'
