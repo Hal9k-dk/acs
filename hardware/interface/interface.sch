@@ -14,47 +14,16 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L interface-rescue:BC547 Q1
-U 1 1 58D2E8F5
-P 7500 5000
-F 0 "Q1" H 7700 5075 50  0000 L CNN
-F 1 "BC547" H 7700 5000 50  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-92_Wide" H 7700 4925 50  0001 L CIN
-F 3 "" H 7500 5000 50  0001 L CNN
-	1    7500 5000
-	1    0    0    -1  
-$EndComp
-$Comp
-L interface-rescue:DIODE D1
-U 1 1 58D2E9AA
-P 7050 4400
-F 0 "D1" H 7050 4500 40  0000 C CNN
-F 1 "1N4148" H 7050 4300 40  0000 C CNN
-F 2 "Diode_THT:D_DO-35_SOD27_P2.54mm_Vertical_AnodeUp" H 7050 4400 60  0001 C CNN
-F 3 "" H 7050 4400 60  0000 C CNN
-	1    7050 4400
-	0    -1   -1   0   
-$EndComp
-Wire Wire Line
-	7000 5000 7300 5000
-$Comp
 L interface-rescue:GND #PWR014
 U 1 1 58D2EBAA
-P 7600 5300
-F 0 "#PWR014" H 7600 5050 50  0001 C CNN
-F 1 "GND" H 7600 5150 50  0000 C CNN
-F 2 "" H 7600 5300 50  0001 C CNN
-F 3 "" H 7600 5300 50  0001 C CNN
-	1    7600 5300
+P 6650 4600
+F 0 "#PWR014" H 6650 4350 50  0001 C CNN
+F 1 "GND" H 6650 4450 50  0000 C CNN
+F 2 "" H 6650 4600 50  0001 C CNN
+F 3 "" H 6650 4600 50  0001 C CNN
+	1    6650 4600
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	7600 5300 7600 5250
-Wire Wire Line
-	7050 4600 7050 4750
-Wire Wire Line
-	7050 4750 7600 4750
-Connection ~ 7600 4750
 Connection ~ 7050 4000
 $Comp
 L Connector_Generic:Conn_01x02 J8
@@ -68,13 +37,7 @@ F 3 "" H 9150 4400 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	8800 4050 8800 4400
-Wire Wire Line
-	8800 4400 8950 4400
-Wire Wire Line
 	8950 4500 8800 4500
-Wire Wire Line
-	8800 4500 8800 4800
 Text Notes 9350 4500 0    60   ~ 0
 LATCH
 NoConn ~ 9850 2250
@@ -126,19 +89,6 @@ F 3 "" H 6650 4350 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6650 4000 6650 4200
-Wire Wire Line
-	6650 4500 6650 5250
-Wire Wire Line
-	6650 5250 7600 5250
-Connection ~ 7600 5250
-Wire Wire Line
-	7600 4750 7600 4800
-Wire Wire Line
-	7050 4000 7050 4200
-Wire Wire Line
-	7050 4000 7600 4000
-Wire Wire Line
-	7600 5250 7600 5200
 $Comp
 L Connector_Generic:Conn_01x04 J1
 U 1 1 5CDFF210
@@ -169,19 +119,6 @@ Wire Wire Line
 	4100 3100 4050 3100
 Wire Wire Line
 	4050 3100 4050 5000
-Wire Wire Line
-	4050 5000 6700 5000
-$Comp
-L Device:R R5
-U 1 1 58D2EA0D
-P 6850 5000
-F 0 "R5" V 6930 5000 50  0000 C CNN
-F 1 "1K" V 6850 5000 50  0000 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P5.08mm_Vertical" V 6780 5000 50  0001 C CNN
-F 3 "" H 6850 5000 50  0001 C CNN
-	1    6850 5000
-	0    1    1    0   
-$EndComp
 $Comp
 L Connector_Generic:Conn_01x04 J2
 U 1 1 5CE0A21E
@@ -197,29 +134,6 @@ Wire Wire Line
 	4100 3000 4050 3000
 Wire Wire Line
 	4050 3000 4050 2850
-$Comp
-L w_relay:RELAY_DIL16 RLY1
-U 1 1 5CE10714
-P 7750 4400
-F 0 "RLY1" V 7803 4206 60  0000 R CNN
-F 1 "RELAY_DIL16" V 7697 4206 60  0000 R CNN
-F 2 "Acs:DIP-16_Relay" H 7750 4400 60  0001 C CNN
-F 3 "" H 7750 4400 60  0000 C CNN
-	1    7750 4400
-	0    -1   1    0   
-$EndComp
-Wire Wire Line
-	7600 4000 7600 4200
-Wire Wire Line
-	7600 4600 7600 4750
-Wire Wire Line
-	7900 4600 7900 4800
-Wire Wire Line
-	7900 4800 8800 4800
-Wire Wire Line
-	7850 4050 7850 4200
-Wire Wire Line
-	7850 4050 8800 4050
 $Comp
 L interface-rescue:MountingHole-Mechanical H1
 U 1 1 5CE975F5
@@ -269,7 +183,7 @@ GND
 Text Notes 4400 3050 0    60   ~ 0
 +5V
 Text Notes 4400 3150 0    60   ~ 0
-RELAY (D12)
+BUTTON (D12)
 Text Notes 4400 3250 0    60   ~ 0
 SW1 (A5)
 Wire Wire Line
@@ -336,4 +250,41 @@ Wire Wire Line
 Connection ~ 7050 2850
 Wire Wire Line
 	7050 2850 7050 4000
+$Comp
+L Device:R R5
+U 1 1 6060E0D3
+P 7050 4200
+F 0 "R5" H 7120 4246 50  0000 L CNN
+F 1 "1K" H 7120 4155 50  0000 L CNN
+F 2 "" V 6980 4200 50  0001 C CNN
+F 3 "~" H 7050 4200 50  0001 C CNN
+	1    7050 4200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7050 4400 7050 4350
+Wire Wire Line
+	7050 4400 8950 4400
+Wire Wire Line
+	7050 4050 7050 4000
+$Comp
+L interface-rescue:GND #PWR?
+U 1 1 6061156C
+P 8800 4875
+F 0 "#PWR?" H 8800 4625 50  0001 C CNN
+F 1 "GND" H 8805 4702 50  0000 C CNN
+F 2 "" H 8800 4875 50  0001 C CNN
+F 3 "" H 8800 4875 50  0001 C CNN
+	1    8800 4875
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8800 4500 8800 4875
+Wire Wire Line
+	7050 4400 7050 5000
+Wire Wire Line
+	4050 5000 7050 5000
+Connection ~ 7050 4400
+Wire Wire Line
+	6650 4500 6650 4600
 $EndSCHEMATC

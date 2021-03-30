@@ -20,9 +20,10 @@ MCUFRIEND_kbv tft;
 #  include "animater.h"
 #endif
 
-const char* version = "1.1.2";
+const char* version = "1.2.0";
 
 const int SW_PIN = A5;
+const int BUTTON_PIN = 12;
 
 const int TFT_BRIGHTNESS = 200;
 
@@ -48,6 +49,7 @@ Animater anim(tft);
 void setup()
 {
   pinMode(SW_PIN, INPUT);
+  pinMode(BUTTON_PIN, INPUT);
 
   Serial.begin(115200);
 
@@ -89,7 +91,7 @@ const int colours[] =
 
 bool drawn_logo = true;//false;
 
-static bool key_pressed[3];
+static bool key_pressed[4];
 
 void erase_small(int line)
 {
@@ -125,7 +127,10 @@ void loop()
             key_pressed[1] = true;
         else if (sw < 866 && sw > 846)
             key_pressed[2] = true;
-    }    
+    }
+    if (!key_pressed[3])
+        key_pressed[3] = !digitalRead(BUTTON_PIN);
+    
     if (Serial.available())
     {
         // Command
