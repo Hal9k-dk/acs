@@ -343,7 +343,9 @@ class Ui
     write(true, false, 0, 'FATAL ERROR:', 'red')
     write(true, false, 2, 'LOCK REPLY:', 'red')
     write(false, false, 5, reply.strip(), 'red')
-    puts("Fatal error: lock said #{reply}")
+    s = "Fatal error: lock said #{reply}"
+    puts s
+    @slack.set_status(s)
     while true
       @reader.send(SOUND_LOCK_FAULTY1)
       sleep(0.5)
@@ -730,7 +732,9 @@ class Ui
       clear()
       write(true, false, 0, 'FATAL ERROR:', 'red')
       write(false, false, 4, 'UNKNOWN LOCK STATE', 'red')
-      puts("Fatal error: Unknown desired lock state '#{@desired_lock_state}'")
+      s = "Fatal error: Unknown desired lock state '#{@desired_lock_state}'"
+      puts s
+      @slack.set_status(s)
       Process.exit
     end
 
@@ -949,7 +953,9 @@ end # end Slack
 
 ports = find_ports()
 if !ports['ui']
-  puts("Fatal error: No UI found")
+  s = "Fatal error: No UI found"
+  puts s
+  @slack.set_status(s)
   Process.exit
 end
 
@@ -959,7 +965,9 @@ ui.clear()
 if !ports['reader']
   ui.write(true, false, 0, 'FATAL ERROR:', 'red')
   ui.write(false, false, 4, 'NO READER FOUND', 'red')
-  puts("Fatal error: No card reader found")
+  s = "Fatal error: No card reader found"
+  puts s
+  @slack.set_status(s)
   Process.exit
 end
 
