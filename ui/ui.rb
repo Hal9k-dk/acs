@@ -255,6 +255,7 @@ class Ui
     # One-shot function to call after unlocking
     @after_unlock_fn = nil
     @in_thursday_mode = false
+    @complained_on_slack = nil
     @port = port
     @lock = lock
     @port.flush_input
@@ -592,6 +593,10 @@ class Ui
         if do_clear
           set_status('', 'blue')
         end
+        if @complained_on_slack
+          @slack.set_status("Door is locked")
+          @complained_on_slack = false
+        end
       else
         clear()
         puts("ERROR: Cannot #{what}: '#{resp[1]}'")
@@ -608,6 +613,7 @@ class Ui
           sleep(0.3)
         end
         @slack.set_status("#{SLACK_IMPORTANT} I could not #{what.downcase} the door")
+        @complained_on_slack = true
       end
     end
   end
