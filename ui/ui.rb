@@ -14,6 +14,8 @@ require 'tzinfo'
 
 $stdout.sync = true
 
+VERSION = '1.0.0'
+
 HOST = 'https://127.0.0.1'
 
 LED_ENTER = 'P250R8SGN'
@@ -118,6 +120,11 @@ def find_ports()
             line.strip!
             reply = line.gsub(/[^[:print:]]/i, '')
             puts "Got #{line} -> #{reply}"
+            if reply == "V"
+              # Echo is on
+              line = sp.gets
+              reply = line.gsub(/[^[:print:]]/i, '')
+            end
             if reply.include? "ACS"
               puts("Version: #{reply}")
               if reply.include? "UI"
@@ -134,6 +141,7 @@ def find_ports()
               break
             end
           end
+          sp.flush_input
         end
       end
     rescue Exception => e  
@@ -319,6 +327,9 @@ class Ui
     clear()
     set_status('Locking', 'orange')
     resp = lock_send_and_wait("set_verbosity 0")
+    if !resp[0]
+      lock_is_faulty(resp[1])
+    end
     resp = lock_send_and_wait("lock")
     if !resp[0]
       if resp[1].include? "not calibrated"
@@ -347,12 +358,13 @@ class Ui
     s = "Fatal error: lock said #{reply}"
     puts s
     @slack.set_status(s)
-    while true
+    for i in 1..10
       @reader.send(SOUND_LOCK_FAULTY1)
       sleep(0.5)
       @reader.send(SOUND_LOCK_FAULTY2)
       sleep(0.8)
     end
+    Process.exit    
   end
   
   def set_slack(slack)
@@ -992,17 +1004,18 @@ if !ports['reader']
   Process.exit
 end
 
+slack = Slack.new()
+ui.set_slack(slack)
+
 reader = CardReader.new(ports['reader'])
 reader.set_ui(ui)
 ui.set_reader(reader)
 
 ui.phase2init()
 
-slack = Slack.new()
-ui.set_slack(slack)
-
 puts("----\nReady")
 ui.clear()
+slack.send_message("ui.rb v#{VERSION} starting")
 
 USE_WDOG = false #true
 
