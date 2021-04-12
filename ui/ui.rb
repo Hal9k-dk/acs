@@ -103,7 +103,7 @@ def find_ports()
                           { 'baud' => 115200,
                             'data_bits' => 8,
                             'parity' => SerialPort::NONE,
-                            'read_timeout' => 10
+                            'read_timeout' => 100
                           })
       if sp
         puts "Found #{port}"
@@ -587,7 +587,6 @@ class Ui
         callback = nil
         if @actual_lock_state == :locked
           callback = @after_unlock_fn
-          @after_unlock_fn = nil
           set_status('Unlocking', 'blue')
         end
         resp = lock_send_and_wait("unlock")
@@ -603,6 +602,7 @@ class Ui
         resp = lock_send_and_wait("lock")
         what = 'LOCK'
       end
+      @after_unlock_fn = nil
       if resp[0]
         if do_clear
           set_status('', 'blue')
