@@ -49,5 +49,6 @@ while True:
                     disp.println("Opening")
                     lock.on()
                     sleep(20)
+                    disp.println("Closing")
                     lock.off()
                 
