@@ -2,12 +2,12 @@
 Description=ACS UI Service
 
 [Service]
-WorkingDirectory=/home/torsten/acs/ui
-ExecStart=/bin/bash -c "cd /home/torsten/acs/ui; ./ui.sh"
+WorkingDirectory=/home/hal9k/acs/ui
+ExecStart=/bin/bash -c "cd /home/hal9k/acs/ui; ./ui.sh"
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=acsui
-User=torsten
+User=hal9k
 Restart=always
 
 [Install]
