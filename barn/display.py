@@ -25,6 +25,9 @@ class Display:
         device = sh1106()
         self.term = terminal(device, font, animate=False)
 
+    def println(self, txt):
+        self.term.println(txt)
+        
     def demo(self):
         self.term.println("Terminal mode demo")
         self.term.println("------------------")
