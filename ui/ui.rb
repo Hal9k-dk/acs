@@ -1,9 +1,6 @@
 #!/usr/bin/ruby
 
 # TODO:
-# - reset ports
-# - [DONE] start when fully locked -> manual
-# - Red when locked -> unlock and lock
 # - ERROR: Expected 'Sxx', got '"Bad line number: 675"'
 
 require 'optparse'
@@ -267,7 +264,9 @@ class Ui
     @port = port
     @lock = lock
     @port.flush_input
-    @lock.flush_input
+    if @lock
+      @lock.flush_input
+    end
   end
 
   def set_status(text, colour)
@@ -984,11 +983,24 @@ class Slack
   end
 end # end Slack
 
+slack = Slack.new()
+
+puts "Find ports"
 ports = find_ports()
+puts "Found ports"
 if !ports['ui']
   s = "Fatal error: No UI found"
   puts s
   @slack.set_status(s)
+  Process.exit
+end
+
+if !ports['lock']
+  s = "Fatal error: No lock found"
+  puts s
+  #@slack.set_status(s)
+  ui = Ui.new(ports['ui'], nil)
+  ui.set_status(['FATAL ERROR', 'No lock found'], 'red')
   Process.exit
 end
 
@@ -1004,7 +1016,6 @@ if !ports['reader']
   Process.exit
 end
 
-slack = Slack.new()
 ui.set_slack(slack)
 
 reader = CardReader.new(ports['reader'])
