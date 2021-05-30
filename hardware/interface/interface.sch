@@ -39,7 +39,7 @@ $EndComp
 Wire Wire Line
 	8950 4500 8800 4500
 Text Notes 9350 4500 0    60   ~ 0
-LATCH
+BUTTON 4
 NoConn ~ 9850 2250
 $Comp
 L Device:R R1
@@ -94,7 +94,7 @@ L Connector_Generic:Conn_01x04 J1
 U 1 1 5CDFF210
 P 2300 3400
 F 0 "J1" H 2218 2975 50  0000 C CNN
-F 1 "Switches" H 2218 3066 50  0000 C CNN
+F 1 "Buttons 1-3" H 2218 3066 50  0000 C CNN
 F 2 "Connector_JST:JST_XH_B04B-XH-A_1x04_P2.50mm_Vertical" H 2300 3400 50  0001 C CNN
 F 3 "~" H 2300 3400 50  0001 C CNN
 	1    2300 3400
