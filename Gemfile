@@ -1,8 +1,9 @@
-source 'https://rubygems.org'
+source 'http://rubygems.org'
 
+gem 'bundler'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '4.2.8'
+gem 'rails'
 # Use postgresql as the database for Active Record
 gem 'pg', '~> 0.15'
 # Use SCSS for stylesheets
@@ -56,3 +57,4 @@ gem 'bcrypt', '3.1.12'
 gem 'sucker_punch'
 gem 'mime-types'
 gem 'rest-client'
+gem 'bigdecimal', '2.0.3'
