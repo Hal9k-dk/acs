@@ -11,7 +11,7 @@ from solid.utils import *
 
 SEGMENTS = 16
 
-case_th = 1.5
+case_th = 3
 case_h = 42
 case_d = 18
 case_w = 160
@@ -47,17 +47,23 @@ def screw_hole(left):
         offset = -offset
     return translate([-sw/2, -case_h/2, -1])(translate([sw/2+offset, case_h/2, 0])(cylinder(h=case_h+2, r=2)))
 
-def jack_hole():
-    w = 12
-    h = 6
-    return translate([-9.5 - 6, -h/2 + 0.8, -2])(cube([w, h, 10]))
+def jack_hole(x):
+    w = 12+18
+    h = 15
+    return translate([-w/2 + x, -h/2 + 0.8, -2])(cube([w, h, 10]))
+
+def jack_hole_rim(x):
+    w = 35
+    h = 20
+    return translate([-w/2 + x, -h/2 + 0.8, 0.5])(cube([w, h, 5]))
 
 def assembly():
     bt = bottom()
     fr = frame()
     s1 = left(case_w/2+sw/2-0.1)(screw_hole(True))
     s2 = right(case_w/2+sw/2-0.1)(screw_hole(False))
-    return fr + bt - s1 - s2 - jack_hole()
+    jack_x = -9.5
+    return fr + bt - s1 - s2 + jack_hole_rim(jack_x) - jack_hole(jack_x)
 
 if __name__ == '__main__':
     a = assembly()
