@@ -1,9 +1,11 @@
 from gpiozero import LED
-from time import sleep
+import time
 from rfidreader import RfidReader
 from rest import RestClient
 from display import Display
 import urllib3
+
+TIMEOUT = 10
 
 # Yes, we are using a self-signed cert
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -19,19 +21,24 @@ disp.println("BACS 0.1 ready")
 lock = LED(4)
 
 last_card_id = None
+last_card_time = time.time()
 print("Ready")
 while True:
+    time.sleep(0.1)
     card_id = reader.getid()
     if len(card_id) > 0:
+        if time.time() - last_card_time > TIMEOUT:
+            last_card_id = None
         if card_id != last_card_id:
             print("Card ID %s" % card_id)
             disp.println("Checking card...")
             last_card_id = card_id
+            last_card_time = time.time()
             try:
                 r = restclient.check_card(card_id)
             except:
                 disp.println("Error accessing ACS")
-                sleep(1)
+                time.sleep(1)
                 continue
             if r['id'] == 0:
                 print("Card not found")
@@ -48,7 +55,6 @@ while True:
                 if user_approved:
                     disp.println("Opening")
                     lock.on()
-                    sleep(20)
+                    time.sleep(10)
                     disp.println("Closing")
                     lock.off()
-                
