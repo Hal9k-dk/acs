@@ -1,9 +1,12 @@
 from gpiozero import LED
 from time import sleep
 from rfidreader import RfidReader
+from slack import Slack
 from rest import RestClient
 from display import Display
 import urllib3
+
+VERSION = "0.2"
 
 # Yes, we are using a self-signed cert
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -14,12 +17,15 @@ reader.start()
 restclient = RestClient()
 
 disp = Display()
-disp.println("BACS 0.1 ready")
+disp.println("BACS %s ready" % VERSION)
 
 lock = LED(4)
 
+slack = Slack()
+
 last_card_id = None
 print("Ready")
+slack.set_status("BACS version %s starting" % VERSION)
 while True:
     card_id = reader.getid()
     if len(card_id) > 0:
@@ -36,6 +42,7 @@ while True:
             if r['id'] == 0:
                 print("Card not found")
                 disp.println("Card %s not found" % card_id)
+                slack.set_status("BACS: Unrecognized card %s" % card)
             else:
                 print("Card found")
                 username = r['name']
