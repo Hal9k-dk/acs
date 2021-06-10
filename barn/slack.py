@@ -5,6 +5,7 @@ class Slack:
     def __init__(self):
         file = open('slack-token')
         self.token = file.read()
+        self.last_status = None
 
     def set_status(self, status):
         if status != self.last_status:
