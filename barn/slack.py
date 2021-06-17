@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 
 class Slack:
 
@@ -16,13 +17,16 @@ class Slack:
         return self.last_status
   
     def send_message(self, msg):
-        print("SLACK: %s" % msg)
-        body = { 'channel': "monitoring", 'icon_emoji': ":panopticon:", 'parse': "full", "text": msg }
-        headers = {
-            'content_type': "application/json",
-            "Authorization": "Bearer %s" % self.token
-        }
-        r = requests.post(url = "https://slack.com/api/chat.postMessage", data = body, headers = headers)
+        print("%s SLACK: %s" % (datetime.now(), msg))
+        try:
+            body = { 'channel': "monitoring", 'icon_emoji': ":panopticon:", 'parse': "full", "text": msg }
+            headers = {
+                'content_type': "application/json",
+                "Authorization": "Bearer %s" % self.token
+            }
+            r = requests.post(url = "https://slack.com/api/chat.postMessage", data = body, headers = headers)
+        except Exception as e:
+            print("%s Slack exception: %s" % (datetime.now, e))
 
 if __name__ == "__main__":
     s = Slack()

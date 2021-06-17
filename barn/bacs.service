@@ -4,7 +4,7 @@ Description=Barn ACS UI Service
 [Service]
 Environment="ACS_TOKEN=i02jt8ahaqk8s7txyvnrymzp5dmlvn3xj1v6i6gh3jccv27ngqc8nvli812dpop0"
 WorkingDirectory=/home/pi/acs/barn
-ExecStart=/bin/bash -c "cd /home/pi/acs/barn; /usr/bin/python3 main.py >> /var/log/bacs.log 2>&1"
+ExecStart=/bin/bash -c "cd /home/pi/acs/barn; ./bacs.sh"
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=bacs
