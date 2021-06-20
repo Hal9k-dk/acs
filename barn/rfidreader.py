@@ -57,7 +57,7 @@ if __name__ == "__main__":
     l = RfidReader()
     l.start()
     
-    for x in range(0, 20):
+    for x in range(0, 200):
         print("ID %s" % l.getid())
         time.sleep(2)
         
