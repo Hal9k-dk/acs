@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ESP32-S2-Lilygo
+D ESP32-S2 module
+K esp32-s2
+F https://user-images.githubusercontent.com/25348566/101335486-8ea04b00-3879-11eb-816f-1f3db5f98555.JPG
+$ENDCMP
+#
+#End Doc Library
