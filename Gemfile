@@ -4,10 +4,10 @@ gem 'bundler'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
 gem 'rails'
-# Use postgresql as the database for Active Record
-gem 'pg', '~> 0.15'
+# Use mariadb as the database for Active Record
+gem 'mysql2'
 # Use SCSS for stylesheets
-gem 'sass-rails', '~> 5.0'
+gem 'sassc'
 # Use Uglifier as compressor for JavaScript assets
 gem 'uglifier', '>= 1.3.0'
 # Use CoffeeScript for .coffee assets and views
@@ -46,7 +46,7 @@ group :development do
   gem 'web-console', '~> 2.0'
 
   # Spring speeds up development by keeping your application running in the background. Read more: https://github.com/rails/spring
-  gem 'spring'
+#  gem 'spring'
 end
 
 gem 'skins'
@@ -58,3 +58,4 @@ gem 'sucker_punch'
 gem 'mime-types'
 gem 'rest-client'
 gem 'bigdecimal', '2.0.3'
+gem 'sass-rails'
