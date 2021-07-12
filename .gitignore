@@ -14,3 +14,4 @@
 secret.yml
 /reader/apikey.txt
 /barn/settings.yml
+/hardware/esp32/acs-esp32-backups/*
