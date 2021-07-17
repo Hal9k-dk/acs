@@ -137,5 +137,5 @@ private:
     int m_temp = 0;
     int m_index = 0;
     unsigned char m_buf[ID_SIZE];
-    mutable char m_id[ID_SIZE * 2 + 1 + 20]; //!!
+    mutable char m_id[ID_SIZE * 2 + 1];
 };
