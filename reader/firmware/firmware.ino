@@ -145,7 +145,7 @@ void decode_line(const char* line, bool send_reply = true)
     {
     case 'v':
         // Show version
-        Serial.println(F("ACS cardreader v 0.99"));
+        Serial.println(F("ACS cardreader v 1.0 (passive buzzer)"));
         return;
 
     case 'c':
