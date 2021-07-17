@@ -1,62 +1,30 @@
 #include <ctype.h>
 
-//#define PROTOCOL_DEBUG
-
 #include <RDM6300.h>
 #include <SoftwareSerial.h>
 
-static constexpr const int PIN_RX = 3;
-static constexpr const int PIN_TX = A5; // Not connected
-static constexpr const int PIN_GREEN = 5;
-static constexpr const int PIN_RED = 6;
-static constexpr const int PIN_BUZZER1 = 7;
-static constexpr const int PIN_BUZZER2 = 8;
-
-static constexpr const int MIN_BEEP_INTERVAL_MS = 1500;
-
-// 200/500 = boo
-// 900/200 = yay
+const int PIN_RX = 2;
+const int PIN_TX = A5; // Not connected
+const int PIN_GREEN = 5; // Needs PWM support
+const int PIN_RED = 3; // Needs PWM support
+const int PIN_BUZZER = 6; // Needs PWM support
 
 SoftwareSerial swSerial(PIN_RX, PIN_TX);
 
-int beep_duration = 0;
-int beep_interval = 0;
-int beep_duration_left = 0;
-int beep_interval_left = 0;
-int beep_last_tick = 0;
-bool beep_flag = false;
-
-void update_leds();
-
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     swSerial.begin(9600);
 
-    pinMode(7, OUTPUT);
     pinMode(PIN_GREEN, OUTPUT);
     pinMode(PIN_RED, OUTPUT);
-    pinMode(PIN_BUZZER1, OUTPUT);
-    pinMode(PIN_BUZZER2, OUTPUT);
-
-    // set timer2 interrupt at 8kHz
-    TCCR2A = 0;// set entire TCCR2A register to 0
-    TCCR2B = 0;// same for TCCR2B
-    TCNT2  = 0;//initialize counter value to 0
-    // set compare match register for 8khz increments
-    OCR2A = 249;// = (16*10^6) / (8000*8) - 1 (must be <256)
-    // turn on CTC mode
-    TCCR2A |= (1 << WGM21);
-    // Set CS21 bit for 8 prescaler
-    TCCR2B |= (1 << CS21);   
-    // enable timer compare interrupt
-    TIMSK2 |= (1 << OCIE2A);
+    pinMode(PIN_BUZZER, OUTPUT);
 }
 
 RDM6300 decoder;
 int n = 0;
 
-const int MAX_SEQ_SIZE = 250;
+const int MAX_SEQ_SIZE = 500;
 enum class Sequence
 {
     Red,
@@ -67,17 +35,18 @@ enum class Sequence
 char sequence[MAX_SEQ_SIZE];
 int sequence_len = 0;
 int sequence_index = 0;
-int sequence_period = 80;
+int sequence_period = 1;
+int delay_counter = 0;
 int sequence_repeats = 1; // to force idle sequence on startup
 int sequence_iteration = 0;
-int pwm_max = 64;
+int pwm_max = 255;
 int buzzer_on = 255;
 
 bool parse_int(const char* line, int& index, int& value)
 {
     if (!isdigit(line[index]))
     {
-        Serial.print(F("Expected number, got "));
+        Serial.print("Expected number, got ");
         Serial.println(line[index]);
         return false;
     }
@@ -96,7 +65,7 @@ bool fill_seq(char* seq, int& index, int reps, Sequence elem)
     {
         if (index >= MAX_SEQ_SIZE)
         {
-            Serial.println(F("Sequence too long"));
+            Serial.println("Sequence too long");
             return false;
         }
         seq[index++] = (char) elem;
@@ -104,39 +73,7 @@ bool fill_seq(char* seq, int& index, int reps, Sequence elem)
     return true;
 }
 
-bool swserial_active = false;
-
-void make_swserial_work()
-{
-    if (!swserial_active)
-    {
-        swSerial.end();
-        swSerial.begin(9600);
-    }
-}
-
-void beep(int freq, int duration)
-{
-    beep_interval = 4000/freq;
-    beep_interval_left = beep_interval;
-    beep_duration = duration*8;
-    beep_duration_left = beep_duration;
-}
-
-void set_idle_pattern()
-{
-    // Idle LED pattern: P10R0SGX99N
-    sequence_index = 0;
-    sequence_period = 10*8;
-    sequence_repeats = 0;
-    sequence_iteration = 0;
-    int index = 0;
-    sequence[index++] = (char) Sequence::Green;
-    fill_seq(sequence, index, 99, Sequence::None);
-    sequence_len = index;
-}
-
-char current_card[RDM6300::ID_SIZE * 2 + 1] = { 0 };
+String current_card;
 
 void decode_line(const char* line, bool send_reply = true)
 {
@@ -145,14 +82,14 @@ void decode_line(const char* line, bool send_reply = true)
     {
     case 'v':
         // Show version
-        Serial.println(F("ACS cardreader v 0.99"));
+        Serial.println("ACS cardreader v 0.8 (active buzzer)");
         return;
 
     case 'c':
         // Read card ID
-        Serial.print(F("ID"));
+        Serial.print("ID");
         Serial.println(current_card);
-        current_card[0] = '\0';
+        current_card = "";
         return;
 
     case 'i':
@@ -162,16 +99,18 @@ void decode_line(const char* line, bool send_reply = true)
             ++i;
             if (!parse_int(line, i, inten))
             {
-                Serial.print(F("Value must follow I"));
+                Serial.print("Value must follow I: ");
+                Serial.println(line);
                 return;
             }
             if ((inten < 1) || (inten > 255))
             {
-                Serial.print(F("Intensity must be between 1 and 255"));
+                Serial.print("Intensity must be between 1 and 255: ");
+                Serial.println(line);
                 return;
             }
             pwm_max = inten;
-            Serial.println(F("OK"));
+            Serial.println("OK");
         }
         return;
         
@@ -182,54 +121,18 @@ void decode_line(const char* line, bool send_reply = true)
             ++i;
             if (!parse_int(line, i, inten))
             {
-                Serial.print(F("Value must follow B: "));
+                Serial.print("Value must follow B: ");
                 Serial.println(line);
                 return;
             }
             if ((inten < 1) || (inten > 255))
             {
-                Serial.print(F("Intensity must be between 1 and 255: "));
+                Serial.print("Intensity must be between 1 and 255: ");
                 Serial.println(line);
                 return;
             }
             buzzer_on = inten;
-            Serial.println(F("OK"));
-        }
-        return;
-
-    case 's':
-        // Make sound
-        {
-            int freq = 0;
-            ++i;
-            if (!parse_int(line, i, freq))
-            {
-                Serial.print(F("Value must follow S: "));
-                Serial.println(line);
-                return;
-            }
-            if ((freq < 100) || (freq > 8000))
-            {
-                Serial.print(F("Frequency must be between 100 and 8000: "));
-                Serial.println(line);
-                return;
-            }
-            int duration = 0;
-            ++i;
-            if (!parse_int(line, i, duration))
-            {
-                Serial.print(F("Duration must follow frequency: "));
-                Serial.println(line);
-                return;
-            }
-            if ((duration < 10) || (duration > 1000))
-            {
-                Serial.print(F("Duration must be between 10 and 1000: "));
-                Serial.println(line);
-                return;
-            }
-            beep(freq, duration);
-            Serial.println(F("OK"));
+            Serial.println("OK");
         }
         return;
         
@@ -237,30 +140,29 @@ void decode_line(const char* line, bool send_reply = true)
         break;
 
     default:
-        Serial.print(F("Line must begin with P: "));
+        Serial.print("Line must begin with P: ");
         Serial.println(line);
         return;
     }
     ++i;
-    // P<period>R<repeats>S<sequence>
     int period = 0;
     if (!parse_int(line, i, period))
     {
-        Serial.print(F("Period must follow P: "));
+        Serial.print("Period must follow P: ");
         Serial.println(line);
         return;
     }
     if (period <= 0)
     {
-        Serial.print(F("Period cannot be zero: "));
+        Serial.print("Period cannot be zero: ");
         Serial.println(line);
         return;
     }
     if (tolower(line[i]) != 'r')
     {
-        Serial.print(F("Period must be followed by R, got "));
+        Serial.print("Period must be followed by R, got ");
         Serial.print(line[i]);
-        Serial.print(F(": "));
+        Serial.print(": ");
         Serial.println(line);
         return;
     }
@@ -268,15 +170,15 @@ void decode_line(const char* line, bool send_reply = true)
     int repeats = 0;
     if (!parse_int(line, i, repeats))
     {
-        Serial.print(F("Repeats must follow R: "));
+        Serial.print("Repeats must follow R: ");
         Serial.println(line);
         return;
     }
     if (tolower(line[i]) != 's')
     {
-        Serial.print(F("Repeats must be followed by S, got "));
+        Serial.print("Repeats must be followed by S, got ");
         Serial.print(line[i]);
-        Serial.print(F(": "));
+        Serial.print(": ");
         Serial.println(line);
         return;
     }
@@ -287,7 +189,7 @@ void decode_line(const char* line, bool send_reply = true)
     {
         if (seq_len == MAX_SEQ_SIZE)
         {
-            Serial.print(F("Sequence too long: "));
+            Serial.print("Sequence too long: ");
             Serial.println(line);
             return;
         }
@@ -311,7 +213,7 @@ void decode_line(const char* line, bool send_reply = true)
                 ++i;
                 if (!parse_int(line, i, reps))
                 {
-                    Serial.print(F("X must be followed by repeats"));
+                    Serial.print("X must be followed by repeats");
                     Serial.println(line);
                     return;
                 }
@@ -334,36 +236,99 @@ void decode_line(const char* line, bool send_reply = true)
                         return;
                     break;
                 default:
-                    Serial.print(F("Unexpected character after X: "));
+                    Serial.print("Unexpected character after X: ");
                     Serial.print(line[i]);
-                    Serial.print(F(": "));
+                    Serial.print(": ");
                     Serial.println(line);
                     return;
                 }
             }
             break;
         default:
-            Serial.print(F("Unexpected sequence character: "));
+            Serial.print("Unexpected sequence character: ");
             Serial.print(line[i]);
-            Serial.print(F(": "));
+            Serial.print(": ");
             Serial.println(line);
             return;
         }
         ++i;
     }
     sequence_index = 0;
-    sequence_period = period*8; // 8 kHz
+    sequence_period = period;
     sequence_repeats = repeats;
     sequence_iteration = 0;
     for (int i = 0; i < seq_len; ++i)
         sequence[i] = seq[i];
     sequence_len = seq_len;
     if (send_reply)
-        Serial.println(F("OK"));
+        Serial.println("OK");
 }
 
-void update_leds()
+const int MAX_LINE_LENGTH = 80;
+char line[MAX_LINE_LENGTH+1];
+int line_len = 0;
+
+unsigned long card_flash_start = 0;
+bool card_flash_active = false;
+bool card_flash_state = false;
+
+void loop()
 {
+    delay(1);
+    
+    const auto c = swSerial.read();
+    if (c > 0)
+        if (decoder.add_byte(c))
+        {
+            current_card = decoder.get_id();
+            if (!card_flash_active)
+            {
+                card_flash_active = true;
+                const auto now = millis();
+                card_flash_start = now;
+                analogWrite(PIN_BUZZER, buzzer_on);
+            }
+        }
+
+    if (card_flash_active)
+    {
+        analogWrite(PIN_RED, card_flash_state ? 0 : pwm_max);
+        analogWrite(PIN_GREEN, card_flash_state ? pwm_max : 0);
+        card_flash_state = !card_flash_state;
+        delay(100);
+        analogWrite(PIN_BUZZER, card_flash_state ? buzzer_on : 0);
+        const auto now = millis();
+        if (now - card_flash_start > 500)
+        {
+            card_flash_active = false;
+            analogWrite(PIN_BUZZER, 0);
+        }
+        return;
+    }
+
+    if (++delay_counter < sequence_period)
+        return;
+    delay_counter = 0;
+       
+    if (Serial.available())
+    {
+        const char c = Serial.read();
+        if ((c == '\r') || (c == '\n'))
+        {
+            line[line_len] = 0;
+            line_len = 0;
+            decode_line(line);
+        }
+        else if (line_len < MAX_LINE_LENGTH)
+            line[line_len++] = c;
+        else
+        {
+            Serial.print("Line too long: ");
+            Serial.println(line);
+            line_len = 0;
+        }
+    }
+
     if (sequence_index >= sequence_len)
     {
         sequence_index = 0;
@@ -375,7 +340,7 @@ void update_leds()
                 analogWrite(PIN_GREEN, 0);
                 analogWrite(PIN_RED, 0);
                 sequence_len = 0;
-                set_idle_pattern();
+                decode_line("P5R0SGX199N", false);
                 return;
             }
             ++sequence_iteration;
@@ -403,87 +368,4 @@ void update_leds()
             break;
         }
     }
-}
-
-SIGNAL(TIMER2_COMPA_vect) 
-{
-    if (beep_duration_left >= 0)
-    {
-        --beep_duration_left;
-        --beep_interval_left;
-        if (beep_interval_left <= 0)
-        {
-            beep_interval_left = beep_interval;
-            if (beep_flag)
-            {
-                digitalWrite(PIN_BUZZER1, 0);
-                digitalWrite(PIN_BUZZER2, 1);
-            }
-            else
-            {
-                digitalWrite(PIN_BUZZER1, 1);
-                digitalWrite(PIN_BUZZER2, 0);
-            }
-            beep_flag = !beep_flag;
-        }
-    }
-    static int delay_counter = 0;
-    if (++delay_counter < sequence_period)
-        return;
-    delay_counter = 0;
-    update_leds();
-}
-
-const int MAX_LINE_LENGTH = 80;
-char line[MAX_LINE_LENGTH+1];
-int line_len = 0;
-
-unsigned long last_beep_tick = 0;
-
-void loop()
-{
-    delay(100);
-    
-    const int c = swSerial.read();
-    if (c > 0)
-    {
-        //Serial.println(c);
-        swserial_active = true;
-        if (decoder.add_byte(c))
-        {
-            swserial_active = false;
-            strcpy(current_card, decoder.get_id());
-            //Serial.print(F("ID.size: ")); Serial.println(strlen(current_card));
-            const auto now = millis();
-            if ((last_beep_tick == 0) ||
-                (now - last_beep_tick > MIN_BEEP_INTERVAL_MS))
-            {
-                last_beep_tick = now;
-                beep(1200, 100);
-            }
-            make_swserial_work();
-        }
-    }
-
-    if (Serial.available())
-    {
-        const char c = Serial.read();
-        if ((c == '\r') || (c == '\n'))
-        {
-            line[line_len] = 0;
-            line_len = 0;
-            decode_line(line);
-            make_swserial_work();
-        }
-        else if (line_len < MAX_LINE_LENGTH)
-            line[line_len++] = c;
-        else
-        {
-            Serial.print(F("Line too long: "));
-            Serial.println(line);
-            line_len = 0;
-            make_swserial_work();
-        }
-    }
-
 }
